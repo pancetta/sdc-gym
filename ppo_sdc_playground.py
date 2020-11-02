@@ -15,10 +15,10 @@ env = DummyVecEnv([lambda: env])
 env = VecNormalize(env, norm_obs=False, norm_reward=True)  # when training norm_reward = True
 
 policy_kwargs = {}
-# policy_kwargs = dict(net_arch=[32, 32])
+policy_kwargs = dict(net_arch=[8])
 model = PPO2(MlpPolicy, env, verbose=1, policy_kwargs=policy_kwargs, tensorboard_log="./sdc_tensorboard/")
 # model.set_env(env)
-model.learn(total_timesteps=int(50000))
+model.learn(total_timesteps=int(100000))
 
 model.save(fname)
 del model  # delete trained model to demonstrate loading
@@ -44,5 +44,8 @@ for i in range(ntests):
         print(info['residual'], info['lam'], info['niter'])
         mean_niter += info['niter']
 
-mean_niter /= nsucc
+if nsucc > 0:
+    mean_niter /= nsucc
+else:
+    mean_niter = -1
 print(f"Success rate: {100 * nsucc / ntests:4.2f}% -- Mean number of iterations (of successes): {mean_niter:4.2f}")

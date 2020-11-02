@@ -1,6 +1,5 @@
 import gym
-import tensorflow as tf
-from stable_baselines.common.policies import MlpPolicy, MlpLnLstmPolicy
+from stable_baselines.common.policies import MlpPolicy
 from stable_baselines.common.vec_env import DummyVecEnv, VecNormalize
 from stable_baselines import PPO2, ACKTR
 
@@ -15,13 +14,13 @@ env = DummyVecEnv([lambda: env])
 env = VecNormalize(env, norm_obs=False, norm_reward=True)  # when training norm_reward = True
 
 policy_kwargs = {}
-# policy_kwargs = dict(net_arch=[128, 32])
+# policy_kwargs = dict(net_arch=[128])
 # policy_kwargs = dict(act_fun=tf.nn.tanh)
 # policy_kwargs = dict(net_arch=[128, dict(vf=[128], pi=[128])])
 # model = PPO2(MlpPolicy, env, verbose=1, policy_kwargs=policy_kwargs, tensorboard_log="./sdc_tensorboard/")
 model = ACKTR(MlpPolicy, env, verbose=1, policy_kwargs=policy_kwargs, tensorboard_log="./sdc_tensorboard/")#, vf_fisher_coef=2.0)
 # model = ACKTR(MlpPolicy, env, verbose=1, policy_kwargs=policy_kwargs, tensorboard_log="./sdc_tensorboard/", lr_schedule='double_middle_drop')
-model.learn(total_timesteps=int(100000))
+model.learn(total_timesteps=int(1000000))
 
 model.save(fname)
 del model  # delete trained model to demonstrate loading
