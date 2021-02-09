@@ -44,13 +44,7 @@ class SDC_Full_Env(gym.Env):
         self.np_random, seed = seeding.np_random(seed)
         return [seed]
 
-    def step(self, action):
-
-        u, _ = self.state
-
-        # I read somewhere that the actions should be scaled to [-1,1], scale it back to [0,1] here...
-        scaled_action = np.interp(action, (-1, 1), (0, 1))
-
+    def __get_prec(self, scaled_action, M):
         # Decide which preconditioner to use (depending on self.prec string).. not very elegant
         if self.prec is None:
             Qdmat = np.zeros_like(self.Q)
@@ -62,17 +56,28 @@ class SDC_Full_Env(gym.Env):
                 Qdmat = U.T
             elif self.prec == 'min':
                 Qdmat = np.zeros_like(self.Q)
-                if u.size == 5:
+                if M == 5:
                     x = [0.2818591930905709, 0.2011358490453793, 0.06274536689514164, 0.11790265267514095,
                          0.1571629578515223]
-                elif u.size == 3:
+                elif M == 3:
                     x = [0.3203856825077055, 0.1399680686269595, 0.3716708461097372]
                 else:
                     # if M is some other number, take zeros. This won't work well, but does not raise an error
-                    x = np.zeros(u.size)
+                    x = np.zeros(M)
                 np.fill_diagonal(Qdmat, x)
             else:
                 raise NotImplementedError()
+        return Qdmat
+
+    def step(self, action):
+
+        u, _ = self.state
+
+        # I read somewhere that the actions should be scaled to [-1,1], scale it back to [0,1] here...
+        scaled_action = np.interp(action, (-1, 1), (0, 1))
+
+        # Get Q_delta, based on self.prec (and/or scaled_action)
+        Qdmat = self.__get_prec(scaled_action=scaled_action, M=u.size)
 
         # Precompute the inverse of P
         Pinv = np.linalg.inv(np.eye(self.coll.num_nodes) - self.lam * self.dt * Qdmat)
@@ -146,29 +151,8 @@ class SDC_Step_Env(SDC_Full_Env):
         # I read somewhere that the actions should be scaled to [-1,1], scale it back to [0,1] here...
         scaled_action = np.interp(action, (-1, 1), (0, 1))
 
-        # Decide which preconditioner to use (depending on self.prec string).. not very elegant
-        if self.prec is None:
-            Qdmat = np.zeros_like(self.Q)
-            np.fill_diagonal(Qdmat, scaled_action)
-        else:
-            if self.prec == 'LU':
-                QT = self.Q.T
-                [_, _, U] = scipy.linalg.lu(QT, overwrite_a=True)
-                Qdmat = U.T
-            elif self.prec == 'min':
-                Qdmat = np.zeros_like(self.Q)
-                if u.size == 5:
-                    x = [0.2818591930905709, 0.2011358490453793, 0.06274536689514164, 0.11790265267514095,
-                         0.1571629578515223]
-                elif u.size == 3:
-                    x = [0.3203856825077055, 0.1399680686269595, 0.3716708461097372]
-                else:
-                    # if M is some other number, take zeros. This won't work well, but does not raise an error
-                    x = np.zeros(u.size)
-                np.fill_diagonal(Qdmat, x)
-            else:
-                raise NotImplementedError()
-
+        # Get Q_delta, based on self.prec (and/or scaled_action)
+        Qdmat = self.__get_prec(scaled_action=scaled_action, M=u.size)
 
         # Compute the inverse of P
         Pinv = np.linalg.inv(np.eye(self.coll.num_nodes) - self.lam * self.dt * Qdmat)
