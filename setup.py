@@ -5,5 +5,9 @@ setup(name='sdc_gym',
       install_requires=[
             'gym',
             'pySDC',
+            'numpy',
+            'scipy',
+            'matplotlib',
+            'stable_baselines'
       ],
 )

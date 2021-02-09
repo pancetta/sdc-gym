@@ -5,15 +5,20 @@ from gym.utils import seeding
 from pySDC.implementations.collocation_classes.gauss_radau_right import CollGaussRadau_Right
 
 import numpy as np
+import scipy
 
 
 class SDC_Full_Env(gym.Env):
-
+    """ This environment implements a full iteration of SDC, i.e. for each step we iterate until
+        (a) convergence is reached (residual norm is below restol)
+        (b) more than 50 iterations are done (not converged)
+        (c) diverged
+    """
     action_space = None
     observation_space = None
     num_envs = 1
 
-    def __init__(self, M=None, dt=None, restol = None):
+    def __init__(self, M=None, dt=None, restol=None, prec=None):
 
         self.np_random = None
         self.niter = None
@@ -23,10 +28,13 @@ class SDC_Full_Env(gym.Env):
         self.Q = self.coll.Qmat[1:, 1:]
         self.C = None
         self.lam = None
-        self.u0 = np.ones(self.coll.num_nodes)
+        self.u0 = np.ones(self.coll.num_nodes, dtype=np.complex128)
         self.old_res = None
-
-        self.observation_space = spaces.Box(low=-np.finfo(np.float64).max, high=np.finfo(np.float64).max, shape=(2, M), dtype=np.float64)
+        self.prec = prec
+        # Setting the spaces: both are continuous, observation box articicially bounded by some large numbers
+        # note that because lambda can be complex, U can be complex, i.e. the observation space should be complex
+        self.observation_space = spaces.Box(low=-1E10, high=+1E10, shape=(2, M), dtype=np.complex128)
+        # I read somewhere that the actions should be scaled to [-1,1], values will be real
         self.action_space = spaces.Box(low=-1.0, high=1.0, shape=(M,), dtype=np.float64)
 
         self.seed()
@@ -40,147 +48,151 @@ class SDC_Full_Env(gym.Env):
 
         u, _ = self.state
 
+        # I read somewhere that the actions should be scaled to [-1,1], scale it back to [0,1] here...
         scaled_action = np.interp(action, (-1, 1), (0, 1))
 
-        Qdmat = np.zeros_like(self.Q)
-        np.fill_diagonal(Qdmat, scaled_action)
+        # Decide which preconditioner to use (depending on self.prec string).. not very elegant
+        if self.prec is None:
+            Qdmat = np.zeros_like(self.Q)
+            np.fill_diagonal(Qdmat, scaled_action)
+        else:
+            if self.prec == 'LU':
+                QT = self.Q.T
+                [_, _, U] = scipy.linalg.lu(QT, overwrite_a=True)
+                Qdmat = U.T
+            elif self.prec == 'min':
+                Qdmat = np.zeros_like(self.Q)
+                if u.size == 5:
+                    x = [0.2818591930905709, 0.2011358490453793, 0.06274536689514164, 0.11790265267514095,
+                         0.1571629578515223]
+                elif u.size == 3:
+                    x = [0.3203856825077055, 0.1399680686269595, 0.3716708461097372]
+                else:
+                    # if M is some other number, take zeros. This won't work well, but does not raise an error
+                    x = np.zeros(u.size)
+                np.fill_diagonal(Qdmat, x)
+            else:
+                raise NotImplementedError()
+
+        # Precompute the inverse of P
         Pinv = np.linalg.inv(np.eye(self.coll.num_nodes) - self.lam * self.dt * Qdmat)
+        # The residual and its norm
         residual = self.u0 - self.C @ u
         norm_res_old = np.linalg.norm(residual, np.inf)
+
         done = False
         err = False
         reward = 0
         self.niter = 0
+        # Start the loop
         while not done and not self.niter >= 50 and not err:
             self.niter += 1
-            u += Pinv @ (self.u0 - self.C @ u)
 
+            # This is the iteration (yes, there is a typo in the slides, this one is correct!)
+            u += Pinv @ (self.u0 - self.C @ u)
+            # Comput the residual and its norm
             residual = self.u0 - self.C @ u
             norm_res = np.linalg.norm(residual, np.inf)
+            # stop if something goes wrong
             if np.isnan(norm_res) or np.isinf(norm_res):
-                reward = -50
+                reward = -51
                 break
             # so far this seems to be the best setup:
             #   - stop if residual gets larger than the initial one (not needed, but faster)
             #   - reward = -50, if this happens (crucial!)
-            err = norm_res > norm_res_old * 10
+            err = norm_res > norm_res_old * 100
             if err:
-                reward = -50
+                reward = -51
                 break
+            # check for convergence
             done = norm_res < self.restol
+            # penalty for this iteration
             reward -= 1
-            # norm_res_old = norm_res
+
         done = True
 
-        self.state = (u, abs(residual))
+        self.state = (u, residual)
 
         return self.state, reward, done, {'residual': norm_res, 'niter': self.niter, 'lam': self.lam}
 
     def reset(self):
+        # Draw a lambda (here: negative real for starters)
         self.lam = 1 * np.random.uniform(low=-100.0, high=0.0) + 0j * np.random.uniform(low=0.0, high=10.0)
-        # self.lam = -3.9
+
+        # Compute the system matrix
         self.C = np.eye(self.coll.num_nodes) - self.lam * self.dt * self.Q
+
+        # Initial guess u^0 and initial residual for the state
         u = np.ones(self.coll.num_nodes, dtype=np.complex128)
         residual = self.u0 - self.C @ u
-        self.niter = 0
-
         self.state = (u, residual)
-        return self.state
 
-
-# class SDC_Step_Env(SDC_Full_Env):
-#
-#     def step(self, action):
-#
-#         u, residual = self.state
-#
-#         scaled_action = np.interp(action, (-1, 1), (0, 1))
-#
-#         Qdmat = np.zeros_like(self.Q)
-#         np.fill_diagonal(Qdmat, scaled_action)
-#         Pinv = np.linalg.inv(np.eye(self.coll.num_nodes) - self.lam * self.dt * Qdmat)
-#
-#         self.niter += 1
-#         u += Pinv @ residual
-#         residual = self.u0 - self.C @ u
-#         norm_res = np.linalg.norm(residual, np.inf)
-#
-#         err = norm_res > 1E03
-#         done = norm_res < self.restol or self.niter >= 50 or err
-#
-#         if not err:
-#             reward = -1
-#         else:
-#             reward = -50 + self.niter
-#
-#         self.state = (u, residual)
-#
-#         return self.state, reward, done, {'residual': norm_res, 'niter': self.niter, 'lam': self.lam}
-
-
-class SDC_Step_Env(gym.Env):
-    action_space = None
-    observation_space = None
-    num_envs = 1
-
-    def __init__(self, M=None, dt=None, restol=None):
-        self.np_random = None
-        self.niter = None
-        self.restol = restol
-        self.dt = dt
-        self.coll = CollGaussRadau_Right(M, 0, 1)
-        self.Q = self.coll.Qmat[1:, 1:]
-        self.C = None
-        self.lam = None
-        self.u0 = np.ones(self.coll.num_nodes)
-        self.old_res = None
-
-        self.observation_space = spaces.Box(low=-np.finfo(np.float64).max, high=np.finfo(np.float64).max, shape=(2, 51, M),
-                                            dtype=np.float64)
-        self.action_space = spaces.Box(low=-1.0, high=1.0, shape=(M,), dtype=np.float64)
-
-        self.seed()
-        self.state = None
-
-    def seed(self, seed=None):
-        self.np_random, seed = seeding.np_random(seed)
-        return [seed]
-
-    def reset(self):
-        # self.lam = 1 * np.random.uniform(low=-100.0, high=0.0) + 0j * np.random.uniform(low=0.0, high=10.0)
-        self.lam = -3.9
-        self.C = np.eye(self.coll.num_nodes) - self.lam * self.dt * self.Q
-        u = np.ones(self.coll.num_nodes, dtype=np.complex128)
-        residual = self.u0 - self.C @ u
         self.niter = 0
 
-        self.state = ([u.copy() for _ in range(51)], [residual.copy() for _ in range(51)])
         return self.state
+
+
+class SDC_Step_Env(SDC_Full_Env):
+    """ This environment implements a single iteration of SDC, i.e. for each step we just do one iteration and stop if
+        (a) convergence is reached (residual norm is below restol)
+        (b) more than 50 iterations are done (not converged)
+        (c) diverged
+    """
 
     def step(self, action):
 
-        uvec, resvec = self.state
+        u, residual = self.state
 
+        # I read somewhere that the actions should be scaled to [-1,1], scale it back to [0,1] here...
         scaled_action = np.interp(action, (-1, 1), (0, 1))
 
-        Qdmat = np.zeros_like(self.Q)
-        np.fill_diagonal(Qdmat, scaled_action)
+        # Decide which preconditioner to use (depending on self.prec string).. not very elegant
+        if self.prec is None:
+            Qdmat = np.zeros_like(self.Q)
+            np.fill_diagonal(Qdmat, scaled_action)
+        else:
+            if self.prec == 'LU':
+                QT = self.Q.T
+                [_, _, U] = scipy.linalg.lu(QT, overwrite_a=True)
+                Qdmat = U.T
+            elif self.prec == 'min':
+                Qdmat = np.zeros_like(self.Q)
+                if u.size == 5:
+                    x = [0.2818591930905709, 0.2011358490453793, 0.06274536689514164, 0.11790265267514095,
+                         0.1571629578515223]
+                elif u.size == 3:
+                    x = [0.3203856825077055, 0.1399680686269595, 0.3716708461097372]
+                else:
+                    # if M is some other number, take zeros. This won't work well, but does not raise an error
+                    x = np.zeros(u.size)
+                np.fill_diagonal(Qdmat, x)
+            else:
+                raise NotImplementedError()
+
+
+        # Compute the inverse of P
         Pinv = np.linalg.inv(np.eye(self.coll.num_nodes) - self.lam * self.dt * Qdmat)
 
-        # residual = self.u0 - self.C @ uvec[self.niter]
-        self.niter += 1
-        uvec[self.niter] += Pinv @ resvec[self.niter - 1]
-        resvec[self.niter] = self.u0 - self.C @ uvec[self.niter]
-        norm_res = np.linalg.norm(resvec[self.niter], np.inf)
+        # Do the iteration (note that we already have the residual)
+        u += Pinv @ residual
 
-        err = norm_res > 10 * np.linalg.norm(resvec[self.niter - 1], np.inf)
+        # The new residual and its norm
+        residual = self.u0 - self.C @ u
+        norm_res = np.linalg.norm(residual, np.inf)
+
+        self.niter += 1
+
+        # Check if something went wrong
+        err = np.isnan(norm_res) or np.isinf(norm_res)
+        # Stop iterating when converged, when iteration count is too high or when something bad happened
         done = norm_res < self.restol or self.niter >= 50 or err
 
         if not err:
             reward = -1
         else:
-            reward = -50
+            # return overall reward of -51 (slightly worse than -50 in the "not converged" scenario)
+            reward = -51 + self.niter
 
-        self.state = (uvec, resvec)
+        self.state = (u, residual)
 
         return self.state, reward, done, {'residual': norm_res, 'niter': self.niter, 'lam': self.lam}
