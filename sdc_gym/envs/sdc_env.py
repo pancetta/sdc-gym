@@ -59,7 +59,7 @@ class SDC_Full_Env(gym.Env):
         self.np_random, seed = seeding.np_random(seed)
         return [seed]
 
-    def __get_prec(self, scaled_action, M):
+    def _get_prec(self, scaled_action, M):
         # Decide which preconditioner to use
         # (depending on self.prec string)... not very elegant
         if self.prec is None:
@@ -103,7 +103,7 @@ class SDC_Full_Env(gym.Env):
         scaled_action = np.interp(action, (-1, 1), (0, 1))
 
         # Get Q_delta, based on self.prec (and/or scaled_action)
-        Qdmat = self.__get_prec(scaled_action=scaled_action, M=u.size)
+        Qdmat = self._get_prec(scaled_action=scaled_action, M=u.size)
 
         # Precompute the inverse of P
         Pinv = np.linalg.inv(
@@ -190,7 +190,7 @@ class SDC_Step_Env(SDC_Full_Env):
         scaled_action = np.interp(action, (-1, 1), (0, 1))
 
         # Get Q_delta, based on self.prec (and/or scaled_action)
-        Qdmat = self.__get_prec(scaled_action=scaled_action, M=u.size)
+        Qdmat = self._get_prec(scaled_action=scaled_action, M=u.size)
 
         # Compute the inverse of P
         Pinv = np.linalg.inv(
