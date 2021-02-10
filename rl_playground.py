@@ -242,6 +242,9 @@ def main():
     results_min = test_model(model, env, ntests, 'MIN')
 
     # Plot all three iteration counts over the lambda values
+    plt.xlabel('re(λ)')
+    plt.ylabel('iterations')
+
     plot_results(results_RL, color='b', label='RL')
     plot_results(results_LU, color='r', label='LU')
     plot_results(results_min, color='g', label='MIN')
