@@ -20,7 +20,7 @@ class SDC_Full_Env(gym.Env):
     observation_space = None
     num_envs = 1
 
-    def __init__(self, M=None, dt=None, restol=None, prec=None):
+    def __init__(self, M=None, dt=None, restol=None, prec=None, seed=None):
 
         self.np_random = None
         self.niter = None
@@ -52,7 +52,7 @@ class SDC_Full_Env(gym.Env):
             dtype=np.float64,
         )
 
-        self.seed()
+        self.seed(seed)
         self.state = None
 
     def seed(self, seed=None):
