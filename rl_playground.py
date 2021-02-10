@@ -217,7 +217,10 @@ def main():
         env,
         verbose=1,
         policy_kwargs=policy_kwargs,
-        tensorboard_log='./sdc_tensorboard/',
+        tensorboard_log=str(Path(
+            f'./sdc_tensorboard/'
+            f'{args.model_class.lower()}_{args.policy_class.lower()}/'
+        )),
         learning_rate=learning_rate,
     )
 
@@ -225,8 +228,9 @@ def main():
     # see something)
     model.learn(total_timesteps=int(args.steps))
 
-    fname = 'sdc_model_acktr'
-    model.save(fname)
+    fname = Path(f'sdc_model_{args.model_class.lower()}_'
+                 f'{args.policy_class.lower()}_{learning_rate}.zip')
+    model.save(str(fname))
     # delete trained model to demonstrate loading, not really necessary
     # del model
 
