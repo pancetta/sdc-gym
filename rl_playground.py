@@ -1,5 +1,6 @@
 import argparse
 from pathlib import Path
+import time
 
 import gym
 from stable_baselines.common.vec_env import DummyVecEnv, VecNormalize
@@ -224,9 +225,12 @@ def main():
         learning_rate=learning_rate,
     )
 
+    start_time = time.perf_counter()
     # Train the model (need to put at least 100k steps to
     # see something)
     model.learn(total_timesteps=int(args.steps))
+    duration = time.perf_counter() - start_time
+    print(f'Training took {duration} seconds.')
 
     fname = Path(f'sdc_model_{args.model_class.lower()}_'
                  f'{args.policy_class.lower()}_{learning_rate}.zip')
@@ -241,6 +245,7 @@ def main():
     # Load the trained agent for testing
     # model = model_class.load(fname)
 
+    start_time = time.perf_counter()
     # Test the trained model.
     env = gym.make(envname, M=M, dt=1.0, restol=restol)
     results_RL = test_model(model, env, ntests, 'RL')
@@ -257,6 +262,8 @@ def main():
     # indiesolver.com, parallel and proof-of-concept
     env = gym.make(envname, M=M, dt=1.0, restol=1E-10, prec='min')
     results_min = test_model(model, env, ntests, 'MIN')
+    duration = time.perf_counter() - start_time
+    print(f'Testing took {duration} seconds.')
 
     # Plot all three iteration counts over the lambda values
     plt.xlabel('re(λ)')
