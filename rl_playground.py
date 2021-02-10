@@ -57,6 +57,15 @@ def parse_args():
         help='Learning rate/step size of the model.',
     )
     parser.add_argument(
+        '--rescale_lr',
+        type=bool,
+        default=True,
+        help=(
+            'Whether to rescale the learning rate by the number'
+            'of environments.'
+        ),
+    )
+    parser.add_argument(
         '--model_class',
         type=str,
         default='PPO2',
@@ -73,6 +82,12 @@ def parse_args():
         type=float,
         default=5000,
         help='Number of test runs for each preconditioning method.',
+    )
+    parser.add_argument(
+        '--num_envs',
+        type=int,
+        default=4,
+        help='How many environments to use in parallel.',
     )
     return parser.parse_args()
 
@@ -130,22 +145,33 @@ def test_model(model, env, ntests, name):
     nsucc = 0
     results = []
 
+    num_envs = env.num_envs
+    # Amount of test loops to run
+    ntests = ntests // num_envs * num_envs
+    # Amount of test that will be ran in total
+    ntests_total = ntests * num_envs
+
     for i in range(ntests):
         obs = env.reset()
-        done = False
-        while not done:
+        done = [False for _ in range(num_envs)]
+
+        while not all(done):
             action, _states = model.predict(
                 obs,
                 deterministic=True,
             )
             obs, rewards, done, info = env.step(action)
 
-        if env.niter < 50 and info['residual'] < env.restol:
-            nsucc += 1
-            mean_niter += env.niter
-            # Store each iteration count together with the respective
-            # lambda to make nice plots later on
-            results.append((env.lam.real, env.niter))
+        for (env_, info_) in zip(env.envs, info):
+            # We work on the info here because its information is
+            # not lost with the automatic env reset from a
+            # vectorized environment.
+            if info_['niter'] < 50 and info_['residual'] < env_.restol:
+                nsucc += 1
+                mean_niter += info_['niter']
+                # Store each iteration count together with the respective
+                # lambda to make nice plots later on
+                results.append((info_['lam'].real, info_['niter']))
 
     # Write out mean number of iterations (smaller is better) and the
     # success rate (target: 100 %)
@@ -154,7 +180,7 @@ def test_model(model, env, ntests, name):
     else:
         mean_niter = 666
     print(f'{name}  -- Mean number of iterations and success rate: '
-          f'{mean_niter:4.2f}, {nsucc / ntests * 100} %')
+          f'{mean_niter:4.2f}, {nsucc / ntests_total * 100} %')
     return results
 
 
@@ -180,8 +206,37 @@ def _find_free_path(format_path):
     return path
 
 
+def make_env(
+        args,
+        seed,
+        num_envs=None,
+        include_norm=False,
+        norm_obs=False,
+        norm_reward=True,
+        **kwargs,
+):
+    env = DummyVecEnv([
+        lambda: gym.make(
+            args.envname,
+            M=args.M,
+            seed=seed + i if seed is not None else None,
+            **kwargs,
+        )
+        for i in range(args.num_envs if num_envs is None else num_envs)
+    ])
+    if include_norm:
+        # When training, set `norm_reward = True`, I hear...
+        env = VecNormalize(
+            env,
+            norm_obs=norm_obs,
+            norm_reward=norm_reward,
+        )
+    return env
+
+
 def main():
     args = parse_args()
+    seed = 0
 
     # Set parameters for SDC
     # When to stop iterating (lower means better solution, but
@@ -198,10 +253,16 @@ def main():
     # ---------------- TRAINING STARTS HERE ----------------
 
     # Set up gym environment
-    env = gym.make(envname, M=M, dt=1.0, restol=restol)
-    env = DummyVecEnv([lambda: env])
-    # When training, set `norm_reward = True`, I hear...
-    env = VecNormalize(env, norm_obs=False, norm_reward=True)
+    env = make_env(args, seed=seed, include_norm=True, dt=1.0, restol=restol)
+    eval_env = make_env(
+        args,
+        seed=seed + args.num_envs,
+        include_norm=True,
+        norm_reward=False,
+        num_envs=1,
+        dt=1.0,
+        restol=restol,
+    )
 
     # Set up model
     model_class = _get_model_class(args.model_class)
@@ -212,6 +273,8 @@ def main():
     # Learning rate to try for PPO2: 1E-05
     # Learning rate to try for ACKTR: 1E-03
     learning_rate = args.learning_rate
+    if args.rescale_lr:
+        learning_rate *= args.num_envs
 
     model = model_class(
         policy_class,
@@ -223,6 +286,7 @@ def main():
             f'{args.model_class.lower()}_{args.policy_class.lower()}/'
         )),
         learning_rate=learning_rate,
+        seed=seed,
     )
 
     start_time = time.perf_counter()
@@ -247,20 +311,40 @@ def main():
 
     start_time = time.perf_counter()
     # Test the trained model.
-    env = gym.make(envname, M=M, dt=1.0, restol=restol)
+    env = make_env(
+        args,
+        seed=seed + args.num_envs,
+        num_envs=1,
+        dt=1.0,
+        restol=restol,
+    )
     results_RL = test_model(model, env, ntests, 'RL')
 
     # Restart the whole thing, but now using the LU preconditioner (no RL here)
     # LU is serial and the de-facto standard. Beat this (or at least be on par)
     # and we win!
-    env = gym.make(envname, M=M, dt=1.0, restol=restol, prec='LU')
+    env = make_env(
+        args,
+        seed=seed + args.num_envs,
+        num_envs=1,
+        dt=1.0,
+        restol=restol,
+        prec='LU',
+    )
     results_LU = test_model(model, env, ntests, 'LU')
 
     # Restart the whole thing, but now using the minization preconditioner
     # (no RL here)
     # This minimization approach are just magic numbers we found using
     # indiesolver.com, parallel and proof-of-concept
-    env = gym.make(envname, M=M, dt=1.0, restol=1E-10, prec='min')
+    env = make_env(
+        args,
+        seed=seed + args.num_envs,
+        num_envs=1,
+        dt=1.0,
+        restol=1E-10,
+        prec='min',
+    )
     results_min = test_model(model, env, ntests, 'MIN')
     duration = time.perf_counter() - start_time
     print(f'Testing took {duration} seconds.')
