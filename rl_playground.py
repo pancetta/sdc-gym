@@ -280,11 +280,11 @@ def main():
     if args.rescale_lr:
         learning_rate *= args.num_envs
 
-    best_fname = Path(f'best_sdc_model_{args.model_class.lower()}_'
-                      f'{args.policy_class.lower()}_{learning_rate}.zip')
+    best_dirname = Path(f'best_sdc_model_{args.model_class.lower()}_'
+                        f'{args.policy_class.lower()}_{learning_rate}')
     eval_callback = EvalCallback(
         eval_env,
-        best_model_save_path=str(best_fname),
+        best_model_save_path=str(best_dirname),
         eval_freq=500,
         deterministic=True,
         render=False,
