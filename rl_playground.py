@@ -1,4 +1,5 @@
 import argparse
+from pathlib import Path
 
 import gym
 from stable_baselines.common.vec_env import DummyVecEnv, VecNormalize
@@ -166,6 +167,18 @@ def plot_results(results, color, label):
     )
 
 
+def _find_free_path(format_path):
+    """Get a path following `format_path` into which a single incrementing
+    number is interpolated until a non-existing path is found.
+    """
+    i = 0
+    path = Path(format_path.format(i))
+    while path.exists():
+        i += 1
+        path = Path(format_path.format(i))
+    return path
+
+
 def main():
     args = parse_args()
 
@@ -250,6 +263,10 @@ def main():
     plot_results(results_min, color='g', label='MIN')
 
     plt.legend()
+
+    fig_path = _find_free_path('results_{:>04}.pdf')
+    plt.savefig(fig_path, bbox_inches='tight')
+
     plt.show()
 
 
