@@ -152,12 +152,15 @@ def test_model(model, env, ntests, name):
     ntests_total = ntests * num_envs
 
     for i in range(ntests):
+        state = None
         obs = env.reset()
         done = [False for _ in range(num_envs)]
 
         while not all(done):
-            action, _states = model.predict(
+            action, state = model.predict(
                 obs,
+                state=state,
+                mask=done,
                 deterministic=True,
             )
             obs, rewards, done, info = env.step(action)
