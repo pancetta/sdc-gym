@@ -3,6 +3,7 @@ from pathlib import Path
 import time
 
 import gym
+from stable_baselines.common.callbacks import EvalCallback
 from stable_baselines.common.vec_env import DummyVecEnv, VecNormalize
 import stable_baselines
 import matplotlib.pyplot as plt
@@ -279,6 +280,16 @@ def main():
     if args.rescale_lr:
         learning_rate *= args.num_envs
 
+    best_fname = Path(f'best_sdc_model_{args.model_class.lower()}_'
+                      f'{args.policy_class.lower()}_{learning_rate}.zip')
+    eval_callback = EvalCallback(
+        eval_env,
+        best_model_save_path=str(best_fname),
+        eval_freq=500,
+        deterministic=True,
+        render=False,
+    )
+
     model = model_class(
         policy_class,
         env,
@@ -295,7 +306,7 @@ def main():
     start_time = time.perf_counter()
     # Train the model (need to put at least 100k steps to
     # see something)
-    model.learn(total_timesteps=int(args.steps))
+    model.learn(total_timesteps=int(args.steps), callback=eval_callback)
     duration = time.perf_counter() - start_time
     print(f'Training took {duration} seconds.')
 
