@@ -165,11 +165,21 @@ def check_num_envs(args, policy_class):
     """
     if not policy_class.recurrent:
         return
-    if args.num_envs != 1 and args.eval_freq > 0:
-        raise ValueError(
-            'An `--eval_freq > 0` is given. Due to issues with recurrent '
-            'models and vectorized environments, the number of environments '
-            'must be set to 1 (so append ` --num_envs 1`)',
+    if args.num_envs != 1:
+        if args.eval_freq > 0:
+            raise ValueError(
+                'An `--eval_freq > 0` was given. Due to issues with recurrent '
+                'policies and vectorized environments, the number of '
+                'environments must be set to 1 (so append ` --num_envs 1`)'
+            )
+
+        print(
+            'Warning: The model is recurrent and `--num_envs > 1` was given. '
+            'Testing will take _much_ longer with this configuration than '
+            'with `--num_envs 1`. Furthermore, due to an issue with recurrent '
+            'policies and vectorized environments, the number of test '
+            'environments must be the same as the number of '
+            'training environments.'
         )
 
 
