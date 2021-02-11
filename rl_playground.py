@@ -30,6 +30,14 @@ def parse_args():
         ),
     )
     parser.add_argument(
+        '--dt',
+        type=float,
+        default=1.0,
+        help=(
+            'Size of time step.'
+        ),
+    )
+    parser.add_argument(
         '--restol',
         type=float,
         default=1E-10,
@@ -89,6 +97,15 @@ def parse_args():
         type=int,
         default=4,
         help='How many environments to use in parallel.',
+    )
+    parser.add_argument(
+        '--seed',
+        type=int,
+        default=None,
+        help=(
+            'Base seed for seeding the environments. For multiple '
+            'environments, all will have different seeds based on this one.'
+        ),
     )
     return parser.parse_args()
 
@@ -212,21 +229,29 @@ def _find_free_path(format_path):
 
 def make_env(
         args,
-        seed,
         num_envs=None,
         include_norm=False,
         norm_obs=False,
         norm_reward=True,
         **kwargs,
 ):
+    if num_envs is None:
+        num_envs = args.num_envs
+    M = kwargs.pop('M', args.M)
+    dt = kwargs.pop('dt', args.dt)
+    restol = kwargs.pop('restol', args.restol)
+    seed = kwargs.pop('seed', args.seed)
+
     env = DummyVecEnv([
         lambda: gym.make(
             args.envname,
-            M=args.M,
+            M=M,
+            dt=dt,
+            restol=restol,
             seed=seed + i if seed is not None else None,
             **kwargs,
         )
-        for i in range(args.num_envs if num_envs is None else num_envs)
+        for i in range(num_envs)
     ])
     if include_norm:
         # When training, set `norm_reward = True`, I hear...
@@ -240,32 +265,18 @@ def make_env(
 
 def main():
     args = parse_args()
-    seed = 0
-
-    # Set parameters for SDC
-    # When to stop iterating (lower means better solution, but
-    # more iterations)
-    restol = args.restol
-
-    # Set parameters for RL
-    # 'sdc-v0' –  SDC with a full iteration per step
-    #             (no intermediate observations)
-    # 'sdc-v1' –  SDC with a single iteration per step
-    #             (and intermediate observations)
-    envname = args.envname
+    seed = args.seed
 
     # ---------------- TRAINING STARTS HERE ----------------
 
     # Set up gym environment
-    env = make_env(args, seed=seed, include_norm=True, dt=1.0, restol=restol)
+    env = make_env(args, include_norm=True)
     eval_env = make_env(
         args,
-        seed=seed + args.num_envs,
+        num_envs=1,
         include_norm=True,
         norm_reward=False,
-        num_envs=1,
-        dt=1.0,
-        restol=restol,
+        seed=seed + args.num_envs,
     )
 
     # Set up model
@@ -325,13 +336,7 @@ def main():
 
     start_time = time.perf_counter()
     # Test the trained model.
-    env = make_env(
-        args,
-        seed=seed + args.num_envs,
-        num_envs=1,
-        dt=1.0,
-        restol=restol,
-    )
+    env = make_env(args, num_envs=num_test_envs, seed=seed + args.num_envs)
     results_RL = test_model(model, env, ntests, 'RL')
 
     # Restart the whole thing, but now using the LU preconditioner (no RL here)
@@ -339,11 +344,9 @@ def main():
     # and we win!
     env = make_env(
         args,
-        seed=seed + args.num_envs,
-        num_envs=1,
-        dt=1.0,
-        restol=restol,
+        num_envs=num_test_envs,
         prec='LU',
+        seed=seed + args.num_envs,
     )
     results_LU = test_model(model, env, ntests, 'LU')
 
@@ -353,11 +356,9 @@ def main():
     # indiesolver.com, parallel and proof-of-concept
     env = make_env(
         args,
-        seed=seed + args.num_envs,
-        num_envs=1,
-        dt=1.0,
-        restol=restol,
+        num_envs=num_test_envs,
         prec='min',
+        seed=seed + args.num_envs,
     )
     results_min = test_model(model, env, ntests, 'MIN')
     duration = time.perf_counter() - start_time
