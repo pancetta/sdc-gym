@@ -175,8 +175,6 @@ def test_model(model, env, ntests, name):
     results = []
 
     num_envs = env.num_envs
-    # Amount of test loops to run
-    ntests = ntests // num_envs * num_envs
     # Amount of test that will be ran in total
     ntests_total = ntests * num_envs
 
@@ -390,7 +388,14 @@ def main():
 
     # ---------------- TESTING STARTS HERE ----------------
 
-    ntests = int(args.tests)
+    # Not vectorizing is faster for testing for some reason.
+    num_test_envs = args.num_envs if policy_class.recurrent else 1
+
+    ntests_given = int(args.tests)
+    # Amount of test loops to run
+    ntests = ntests_given // num_test_envs * num_test_envs
+    if ntests != ntests_given:
+        print(f'Warning: `ntests` set to {ntests} ({ntests_given} was given).')
 
     # Load the trained agent for testing
     # model = model_class.load(fname)
