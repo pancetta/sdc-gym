@@ -263,6 +263,28 @@ def make_env(
     return env
 
 
+def _create_eval_callback(args, learning_rate):
+    eval_env = make_env(
+        args,
+        num_envs=1,
+        include_norm=True,
+        # In contrast to training, we don't give this for testing.
+        norm_reward=False,
+        seed=args.seed + args.num_envs,
+    )
+
+    best_dirname = Path(f'best_sdc_model_{args.model_class.lower()}_'
+                        f'{args.policy_class.lower()}_{learning_rate}')
+    eval_callback = EvalCallback(
+        eval_env,
+        best_model_save_path=str(best_dirname),
+        eval_freq=500,
+        deterministic=True,
+        render=False,
+    )
+    return eval_callback
+
+
 def main():
     args = parse_args()
     seed = args.seed
@@ -271,14 +293,6 @@ def main():
 
     # Set up gym environment
     env = make_env(args, include_norm=True)
-    eval_env = make_env(
-        args,
-        num_envs=1,
-        include_norm=True,
-        norm_reward=False,
-        seed=seed + args.num_envs,
-    )
-
     # Set up model
     model_class = _get_model_class(args.model_class)
     policy_class = _get_policy_class(args.policy_class, args.model_class)
@@ -291,15 +305,7 @@ def main():
     if args.rescale_lr:
         learning_rate *= args.num_envs
 
-    best_dirname = Path(f'best_sdc_model_{args.model_class.lower()}_'
-                        f'{args.policy_class.lower()}_{learning_rate}')
-    eval_callback = EvalCallback(
-        eval_env,
-        best_model_save_path=str(best_dirname),
-        eval_freq=500,
-        deterministic=True,
-        render=False,
-    )
+    eval_callback = _create_eval_callback(args, learning_rate)
 
     model_kwargs = {
         'verbose': 1,
