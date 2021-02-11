@@ -301,18 +301,18 @@ def main():
         render=False,
     )
 
-    model = model_class(
-        policy_class,
-        env,
-        verbose=1,
-        policy_kwargs=policy_kwargs,
-        tensorboard_log=str(Path(
+    model_kwargs = {
+        'verbose': 1,
+        'policy_kwargs': policy_kwargs,
+        'tensorboard_log': str(Path(
             f'./sdc_tensorboard/'
             f'{args.model_class.lower()}_{args.policy_class.lower()}/'
         )),
-        learning_rate=learning_rate,
-        seed=seed,
-    )
+        'learning_rate': learning_rate,
+        'seed': seed,
+    }
+
+    model = model_class(policy_class, env, **model_kwargs)
 
     start_time = time.perf_counter()
     # Train the model (need to put at least 100k steps to
