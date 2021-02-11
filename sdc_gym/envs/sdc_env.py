@@ -21,7 +21,7 @@ class SDC_Full_Env(gym.Env):
     observation_space = None
     num_envs = 1
 
-    def __init__(self, M=None, dt=None, restol=None, prec=None, seed=None):
+    def __init__(self, M=None, dt=None, restol=None, prec=None, seed=None, reward=True):
 
         self.np_random = None
         self.niter = None
@@ -159,8 +159,8 @@ class SDC_Full_Env(gym.Env):
 
     def reset(self):
         # Draw a lambda (here: negative real for starters)
-        self.lam = (1 * np.random.uniform(low=-100.0, high=0.0)
-                    + 0j * np.random.uniform(low=0.0, high=10.0))
+        self.lam = (1 * np.random.uniform(low=-100.0, high=0.0) + 0j * np.random.uniform(low=0.0, high=10.0))
+        #self.lam = -10
         
         # Compute the system matrix
         self.C = np.eye(self.coll.num_nodes) - self.lam * self.dt * self.Q
@@ -210,11 +210,6 @@ class SDC_Step_Env(SDC_Full_Env):
         # The new residual and its norm
         residual = self.u0 - self.C @ u
 
-
-        new_reward = abs((math.log(np.linalg.norm(old_residual)) - math.log(np.linalg.norm(residual)) ) / (math.log(np.linalg.norm(self.initial_residual)) - math.log(self.restol) )) # summe ueber alle Iterationen liegt auf [0,1] (hoffentlich)
-        new_reward *= 0.5 
-        new_reward -= 0.01 # jede der 50 Iterationen wird bestraft 
-
         norm_res = np.linalg.norm(residual, np.inf)
 
         self.niter += 1
@@ -227,10 +222,19 @@ class SDC_Step_Env(SDC_Full_Env):
 
         if not err:
             reward = -1
+            factor = 1
+            weight = 0.5
+            new_reward = abs((math.log(np.linalg.norm(old_residual*factor)) - math.log(np.linalg.norm(residual*factor)) ) / (math.log(np.linalg.norm(self.initial_residual*factor)) - math.log(self.restol*factor) )) # summe ueber alle Iterationen liegt auf [0,1] (hoffentlich)
+            new_reward *= weight 
+            new_reward -= 0.01 # jede der 50 Iterationen wird bestraft 
+            #print(new_reward)
+
+
         else:
             # return overall reward of -51
             # (slightly worse than -50 in the "not converged" scenario)
             reward = -51 + self.niter
+            new_reward = -50+ self.niter
 
         self.state = (u, residual)
 

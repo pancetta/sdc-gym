@@ -36,9 +36,17 @@ def parse_args():
         ),
     )
     parser.add_argument(
+        '--reward_iteration_only', #does only affect sdc-v1
+        type=int,
+        default=True, #use False for the new reward that depends on the residual
+        help=(
+            'How to reward the agent '
+        ),
+    )
+    parser.add_argument(
         '--restol',
         type=float,
-        default=1E-10,
+        default=1E-10, #1E-10,
         help=(
             'Residual tolerance; '
             'when residual is below this, stop iterating.'
