@@ -84,6 +84,15 @@ def parse_args():
         help='Class of model policy.',
     )
     parser.add_argument(
+        '--policy_kwargs',
+        type=dict,
+        default={},
+        help=(
+            'Keyword arguments for policy creation. '
+            'See the documentation for details.'
+        ),
+    )
+    parser.add_argument(
         '--tests',
         type=float,
         default=5000,
@@ -189,7 +198,7 @@ def main():
     model_class = utils.get_model_class(args.model_class)
     policy_class = utils.get_policy_class(args.policy_class, args.model_class)
 
-    policy_kwargs = {}
+    policy_kwargs = args.policy_kwargs
 
     # Learning rate to try for PPO2: 1E-05
     # Learning rate to try for ACKTR: 1E-03
