@@ -107,6 +107,15 @@ def parse_args():
             'environments, all will have different seeds based on this one.'
         ),
     )
+    parser.add_argument(
+        '--eval_freq',
+        type=int,
+        default=0,
+        help=(
+            'How often to evaluate the model during training, storing the '
+            'best performing one. If this is 0, do not evaluate.'
+        ),
+    )
     return parser.parse_args()
 
 
@@ -264,6 +273,9 @@ def make_env(
 
 
 def _create_eval_callback(args, learning_rate):
+    if args.eval_freq <= 0:
+        return None
+
     eval_env = make_env(
         args,
         num_envs=1,
@@ -278,7 +290,7 @@ def _create_eval_callback(args, learning_rate):
     eval_callback = EvalCallback(
         eval_env,
         best_model_save_path=str(best_dirname),
-        eval_freq=500,
+        eval_freq=args.eval_freq,
         deterministic=True,
         render=False,
     )
