@@ -166,6 +166,20 @@ def _get_policy_class(policy_class_str, model_class_str):
     return policy_class
 
 
+def _maybe_fix_ntests(ntests_given, num_test_envs):
+    """Return `ntests_given` approximately scaled to a vectorized environment
+    with `num_test_envs` parallel environments.
+
+    Print a warning if the rescaling does not result in the same number of
+    test runs.
+    """
+    # Amount of test loops to run
+    ntests = ntests_given // num_test_envs * num_test_envs
+    if ntests != ntests_given:
+        print(f'Warning: `ntests` set to {ntests} ({ntests_given} was given).')
+    return ntests
+
+
 def test_model(model, env, ntests, name):
     """Test the `model` in the Gym `env` `ntests` times.
     `name` is the name for the test run for logging purposes.
@@ -391,11 +405,8 @@ def main():
     # Not vectorizing is faster for testing for some reason.
     num_test_envs = args.num_envs if policy_class.recurrent else 1
 
-    ntests_given = int(args.tests)
-    # Amount of test loops to run
-    ntests = ntests_given // num_test_envs * num_test_envs
-    if ntests != ntests_given:
-        print(f'Warning: `ntests` set to {ntests} ({ntests_given} was given).')
+    ntests = int(args.tests)
+    ntests = _maybe_fix_ntests(ntests, num_test_envs)
 
     # Load the trained agent for testing
     # model = model_class.load(fname)
