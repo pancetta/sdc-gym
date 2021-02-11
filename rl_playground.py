@@ -356,7 +356,7 @@ def main():
         seed=seed + args.num_envs,
         num_envs=1,
         dt=1.0,
-        restol=1E-10,
+        restol=restol,
         prec='min',
     )
     results_min = test_model(model, env, ntests, 'MIN')
