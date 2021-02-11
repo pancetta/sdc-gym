@@ -1,4 +1,5 @@
 import argparse
+import json
 from pathlib import Path
 import time
 
@@ -85,7 +86,7 @@ def parse_args():
     )
     parser.add_argument(
         '--policy_kwargs',
-        type=dict,
+        type=json.loads,
         default={},
         help=(
             'Keyword arguments for policy creation. '
