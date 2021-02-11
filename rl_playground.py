@@ -137,6 +137,9 @@ def _get_model_class(model_class_str):
 
 
 def _get_policy_class(policy_class_str, model_class_str):
+    """Return a policy class according to `policy_class_str`.
+    `model_class_str` is the model to create the policy for.
+    """
     if model_class_str.upper() == 'DDPG':
         policy_class_module = stable_baselines.ddpg.policies
     elif model_class_str.upper() == 'DQN':
@@ -239,7 +242,7 @@ def plot_results(results, color, label):
 
 
 def _find_free_path(format_path):
-    """Get a path following `format_path` into which a single incrementing
+    """Return a path given by `format_path` into which a single incrementing
     number is interpolated until a non-existing path is found.
     """
     i = 0
@@ -258,6 +261,18 @@ def make_env(
         norm_reward=True,
         **kwargs,
 ):
+    """Return a vectorized environment containing `num_envs` or `args.num_envs`
+    environments (depending on whether `num_envs is None`).
+
+    `args`, the command line arguments, specify several values. See `kwargs`
+    for a more detailed explanation on their interaction.
+    `include_norm` specifies whether the environment is wrapped in a
+    normalizing environment.
+    `norm_obs` and `norm_reward` indicate whether the observations or
+    rewards are normalized (only revelant if `include_norm is True`).
+    `kwargs` are passed directly to the environment creation function. Any
+    value given via `kwargs` has priority over the one given by `args`.
+    """
     if num_envs is None:
         num_envs = args.num_envs
     M = kwargs.pop('M', args.M)
