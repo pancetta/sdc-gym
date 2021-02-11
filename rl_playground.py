@@ -305,13 +305,17 @@ def _create_eval_callback(args, learning_rate):
     if args.eval_freq <= 0:
         return None
 
+    seed = args.seed
+    if seed is not None:
+        seed += args.num_envs
+
     eval_env = make_env(
         args,
         num_envs=1,
         include_norm=True,
         # In contrast to training, we don't give this for testing.
         norm_reward=False,
-        seed=args.seed + args.num_envs,
+        seed=seed,
     )
 
     best_dirname = Path(f'best_sdc_model_{args.model_class.lower()}_'
@@ -367,6 +371,9 @@ def _maybe_fix_nminibatches(model_kwargs, args, policy_class):
 def main():
     args = parse_args()
     seed = args.seed
+    eval_seed = seed
+    if eval_seed is not None:
+        eval_seed += args.num_envs
 
     # ---------------- TRAINING STARTS HERE ----------------
 
@@ -428,7 +435,7 @@ def main():
 
     start_time = time.perf_counter()
     # Test the trained model.
-    env = make_env(args, num_envs=num_test_envs, seed=seed + args.num_envs)
+    env = make_env(args, num_envs=num_test_envs, seed=eval_seed)
     results_RL = test_model(model, env, ntests, 'RL')
 
     # Restart the whole thing, but now using the LU preconditioner (no RL here)
@@ -438,7 +445,7 @@ def main():
         args,
         num_envs=num_test_envs,
         prec='LU',
-        seed=seed + args.num_envs,
+        seed=eval_seed,
     )
     results_LU = test_model(model, env, ntests, 'LU')
 
@@ -450,7 +457,7 @@ def main():
         args,
         num_envs=num_test_envs,
         prec='min',
-        seed=seed + args.num_envs,
+        seed=eval_seed,
     )
     results_min = test_model(model, env, ntests, 'MIN')
     duration = time.perf_counter() - start_time
