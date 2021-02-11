@@ -5,6 +5,7 @@ from gym.utils import seeding
 from pySDC.implementations.collocation_classes.gauss_radau_right import \
     CollGaussRadau_Right
 
+import math
 import numpy as np
 import scipy
 
@@ -33,6 +34,7 @@ class SDC_Full_Env(gym.Env):
         self.u0 = np.ones(self.coll.num_nodes, dtype=np.complex128)
         self.old_res = None
         self.prec = prec
+        self.initial_residual = None
         # Setting the spaces: both are continuous, observation box
         # artificially bounded by some large numbers
         # note that because lambda can be complex, U can be complex,
@@ -159,14 +161,18 @@ class SDC_Full_Env(gym.Env):
         # Draw a lambda (here: negative real for starters)
         self.lam = (1 * np.random.uniform(low=-100.0, high=0.0)
                     + 0j * np.random.uniform(low=0.0, high=10.0))
-
+        
         # Compute the system matrix
         self.C = np.eye(self.coll.num_nodes) - self.lam * self.dt * self.Q
 
         # Initial guess u^0 and initial residual for the state
         u = np.ones(self.coll.num_nodes, dtype=np.complex128)
         residual = self.u0 - self.C @ u
+        self.initial_residual = self.u0 - self.C @ u
+
         self.state = (u, residual)
+
+
 
         self.niter = 0
 
@@ -183,7 +189,8 @@ class SDC_Step_Env(SDC_Full_Env):
 
     def step(self, action):
 
-        u, residual = self.state
+
+        u, old_residual = self.state
 
         # I read somewhere that the actions should be scaled to [-1,1],
         # scale it back to [0,1] here...
@@ -198,10 +205,16 @@ class SDC_Step_Env(SDC_Full_Env):
         )
 
         # Do the iteration (note that we already have the residual)
-        u += Pinv @ residual
+        u += Pinv @ old_residual
 
         # The new residual and its norm
         residual = self.u0 - self.C @ u
+
+
+        new_reward = abs((math.log(np.linalg.norm(old_residual)) - math.log(np.linalg.norm(residual)) ) / (math.log(np.linalg.norm(self.initial_residual)) - math.log(self.restol) )) # summe ueber alle Iterationen liegt auf [0,1] (hoffentlich)
+        new_reward *= 0.5 
+        new_reward -= 0.01 # jede der 50 Iterationen wird bestraft 
+
         norm_res = np.linalg.norm(residual, np.inf)
 
         self.niter += 1
@@ -226,4 +239,4 @@ class SDC_Step_Env(SDC_Full_Env):
             'niter': self.niter,
             'lam': self.lam,
         }
-        return (self.state, reward, done, info)
+        return (self.state, new_reward, done, info)
