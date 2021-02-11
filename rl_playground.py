@@ -90,6 +90,8 @@ def parse_args():
         help=(
             'Keyword arguments for policy creation. '
             'See the documentation for details.'
+            'Example for MlpLstmPolicy: '
+            '`--policy_kwargs \'{"net_arch": [128, 128, "lstm"]}\'`'
         ),
     )
     parser.add_argument(
