@@ -10,6 +10,8 @@ import matplotlib.pyplot as plt
 
 import sdc_gym
 
+PPO2_DEFAULT_NUM_MINIBATCHES = 4
+
 
 def parse_args():
     parser = argparse.ArgumentParser()
@@ -297,6 +299,44 @@ def _create_eval_callback(args, learning_rate):
     return eval_callback
 
 
+def _check_num_envs(args, policy_class):
+    """Raise an error if the number of environments will cause issues with
+    the model.
+    """
+    if not policy_class.recurrent:
+        return
+    if args.num_envs != 1 and args.eval_freq > 0:
+        raise ValueError(
+            'An `--eval_freq > 0` is given. Due to issues with recurrent '
+            'models and vectorized environments, the number of environments '
+            'must be set to 1 (so append ` --num_envs 1`)',
+        )
+
+
+def _maybe_fix_nminibatches(model_kwargs, args, policy_class):
+    """Set the `nminibatches` parameter in `model_kwargs` to
+    `args.num_envs` if the value would cause problems otherwise with the
+    given `policy_class`.
+
+    Print a warning as well if the value had to be changed.
+    Only affects the `PPO2` model.
+    """
+    if args.model_class != 'PPO2' or not policy_class.recurrent:
+        return
+
+    nminibatches = model_kwargs.get(
+        'nminibatches',
+        PPO2_DEFAULT_NUM_MINIBATCHES,
+    )
+    if args.num_envs % nminibatches == 0:
+        return
+
+    print('Warning: policy is recurrent and the number of environments is '
+          'not a multiple of `PPO2.nminibatches`. '
+          'Setting `nminibatches = num_envs`...')
+    model_kwargs['nminibatches'] = args.num_envs
+
+
 def main():
     args = parse_args()
     seed = args.seed
@@ -329,6 +369,9 @@ def main():
         'learning_rate': learning_rate,
         'seed': seed,
     }
+
+    _check_num_envs(args, policy_class)
+    _maybe_fix_nminibatches(model_kwargs, args, policy_class)
 
     model = model_class(policy_class, env, **model_kwargs)
 
