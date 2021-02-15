@@ -5,7 +5,6 @@ import time
 
 import matplotlib.pyplot as plt
 
-import sdc_gym
 import utils
 
 

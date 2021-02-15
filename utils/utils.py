@@ -5,6 +5,8 @@ from stable_baselines.common.callbacks import EvalCallback
 from stable_baselines.common.vec_env import DummyVecEnv, VecNormalize
 import stable_baselines
 
+import sdc_gym
+
 PPO2_DEFAULT_NUM_MINIBATCHES = 4
 
 

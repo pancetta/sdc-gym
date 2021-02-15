@@ -1,13 +1,13 @@
+import math
+import numpy as np
+import scipy
+
 import gym
 from gym import spaces
 from gym.utils import seeding
 
 from pySDC.implementations.collocation_classes.gauss_radau_right import \
     CollGaussRadau_Right
-
-import math
-import numpy as np
-import scipy
 
 
 class SDC_Full_Env(gym.Env):
@@ -78,6 +78,9 @@ class SDC_Full_Env(gym.Env):
         return [seed]
 
     def _get_prec(self, scaled_action, M):
+        """Return a preconditioner based on the `scaled_action`.
+        `M` is the problem size.
+        """
         # Decide which preconditioner to use
         # (depending on self.prec string)... not very elegant
         if self.prec is None:
@@ -114,7 +117,7 @@ class SDC_Full_Env(gym.Env):
 
     def step(self, action):
 
-        u, _ = self.state
+        u, old_residual = self.state
 
         # I read somewhere that the actions should be scaled to [-1,1],
         # scale it back to [0,1] here...
@@ -127,33 +130,28 @@ class SDC_Full_Env(gym.Env):
         Pinv = np.linalg.inv(
             np.eye(self.coll.num_nodes) - self.lam * self.dt * Qdmat,
         )
-        # The residual and its norm
-        residual = self.u0 - self.C @ u
-        norm_res_old = np.linalg.norm(residual, np.inf)
+        norm_res_old = np.linalg.norm(old_residual, np.inf)
 
         done = False
         err = False
-        reward = 0
         self.niter = 0
         # Start the loop
-        while not done and not self.niter >= 50 and not err:
+        while not done and not self.niter >= 50:
             self.niter += 1
 
             # This is the iteration (yes, there is a typo in the slides,
             # this one is correct!)
             u += Pinv @ (self.u0 - self.C @ u)
-            # Comput the residual and its norm
+            # Compute the residual and its norm
             residual = self.u0 - self.C @ u
             norm_res = np.linalg.norm(residual, np.inf)
             # stop if something goes wrong
-            if np.isnan(norm_res) or np.isinf(norm_res):
-                reward = -51
-                break
+            err = np.isnan(norm_res) or np.isinf(norm_res)
             # so far this seems to be the best setup:
             #   - stop if residual gets larger than the initial one
             #     (not needed, but faster)
             #   - reward = -50, if this happens (crucial!)
-            err = norm_res > norm_res_old * 100
+            err = err or norm_res > norm_res_old * 100
             if err:
                 reward = -self.step_penalty * 51
                 # reward = -51
@@ -181,20 +179,19 @@ class SDC_Full_Env(gym.Env):
 
     def reset(self):
         # Draw a lambda (here: negative real for starters)
-        self.lam = (1 * np.random.uniform(low=-100.0, high=0.0) + 0j * np.random.uniform(low=0.0, high=10.0))
-        #self.lam = -10
-        
+        self.lam = (1 * np.random.uniform(low=-100.0, high=0.0)
+                    + 0j * np.random.uniform(low=0.0, high=10.0))
+        # self.lam = -10
+
         # Compute the system matrix
         self.C = np.eye(self.coll.num_nodes) - self.lam * self.dt * self.Q
 
         # Initial guess u^0 and initial residual for the state
         u = np.ones(self.coll.num_nodes, dtype=np.complex128)
         residual = self.u0 - self.C @ u
-        self.initial_residual = self.u0 - self.C @ u
+        self.initial_residual = residual
 
         self.state = (u, residual)
-
-
 
         self.niter = 0
 
@@ -233,7 +230,6 @@ class SDC_Step_Env(SDC_Full_Env):
 
     def step(self, action):
 
-
         u, old_residual = self.state
 
         # I read somewhere that the actions should be scaled to [-1,1],
@@ -255,11 +251,17 @@ class SDC_Step_Env(SDC_Full_Env):
         residual = self.u0 - self.C @ u
 
         norm_res = np.linalg.norm(residual, np.inf)
+        norm_res_old = np.linalg.norm(old_residual, np.inf)
 
         self.niter += 1
 
         # Check if something went wrong
         err = np.isnan(norm_res) or np.isinf(norm_res)
+        # so far this seems to be the best setup:
+        #   - stop if residual gets larger than the initial one
+        #     (not needed, but faster)
+        #   - reward = -50, if this happens (crucial!)
+        err = err or norm_res > norm_res_old * 100
         # Stop iterating when converged, when iteration count is
         # too high or when something bad happened
         done = norm_res < self.restol or self.niter >= 50 or err
