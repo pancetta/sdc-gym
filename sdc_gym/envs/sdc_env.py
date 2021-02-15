@@ -1,3 +1,4 @@
+import itertools
 import math
 import numpy as np
 import scipy
@@ -5,6 +6,7 @@ import scipy
 import gym
 from gym import spaces
 from gym.utils import seeding
+import matplotlib.pyplot as plt
 
 from pySDC.implementations.collocation_classes.gauss_radau_right import \
     CollGaussRadau_Right
@@ -51,6 +53,10 @@ class SDC_Full_Env(gym.Env):
         self.residual_weight = residual_weight
         self.step_penalty = step_penalty
         self.reward_iteration_only = reward_iteration_only
+
+        self.rewards = []
+        self.episode_rewards = []
+        self.norm_resids = []
         # Setting the spaces: both are continuous, observation box
         # artificially bounded by some large numbers
         # note that because lambda can be complex, U can be complex,
@@ -167,6 +173,8 @@ class SDC_Full_Env(gym.Env):
             )
 
         done = True
+        self.episode_rewards.append(reward)
+        self.norm_resids.append(norm_res)
 
         self.state = (u, residual)
 
@@ -193,6 +201,8 @@ class SDC_Full_Env(gym.Env):
 
         self.state = (u, residual)
 
+        self.rewards.append(self.episode_rewards)
+        self.episode_rewards = []
         self.niter = 0
 
         return self.state
@@ -218,6 +228,39 @@ class SDC_Full_Env(gym.Env):
         # jede der 50 Iterationen wird bestraft
         reward -= steps * self.step_penalty
         return reward
+
+    def plot_rewards(self):
+        plt.xlabel('time')
+        plt.ylabel('reward/residual norm')
+
+        all_rewards = [reward for ep in self.rewards for reward in ep]
+        plt.plot(
+            np.arange(len(all_rewards)),
+            all_rewards,
+            label='individual rewards',
+        )
+
+        episode_lengths = (len(ep) for ep in self.rewards)
+        episode_ends = list(itertools.accumulate(episode_lengths))
+        episode_rewards = [sum(ep) for ep in self.rewards]
+        plt.plot(
+            episode_ends,
+            episode_rewards,
+            label='episodic rewards',
+            marker='.',
+        )
+
+        max_reward = max(map(abs, all_rewards))
+        max_norm_resid = max(self.norm_resids)
+        plt.plot(
+            np.arange(len(self.norm_resids)),
+            [r / max_norm_resid * max_reward for r in self.norm_resids],
+            label='residual norm (rescaled)',
+        )
+
+        plt.legend()
+        plt.savefig('rewards.pdf', bbox_inches='tight')
+        plt.show()
 
 
 class SDC_Step_Env(SDC_Full_Env):
@@ -276,6 +319,9 @@ class SDC_Step_Env(SDC_Full_Env):
             # reward = -self.step_penalty * 51
             # reward = -51 + self.niter
             # reward = -50 + self.niter
+
+        self.episode_rewards.append(reward)
+        self.norm_resids.append(norm_res)
 
         self.state = (u, residual)
 
