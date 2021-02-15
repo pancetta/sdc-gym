@@ -21,7 +21,18 @@ class SDC_Full_Env(gym.Env):
     observation_space = None
     num_envs = 1
 
-    def __init__(self, M=None, dt=None, restol=None, prec=None, seed=None, reward=True):
+    def __init__(
+            self,
+            M=None,
+            dt=None,
+            restol=None,
+            prec=None,
+            seed=None,
+            norm_factor=1,
+            residual_weight=0.5,
+            step_penalty=0.1,
+            reward_iteration_only=True,
+    ):
 
         self.np_random = None
         self.niter = None
@@ -35,6 +46,11 @@ class SDC_Full_Env(gym.Env):
         self.old_res = None
         self.prec = prec
         self.initial_residual = None
+
+        self.norm_factor = norm_factor
+        self.residual_weight = residual_weight
+        self.step_penalty = step_penalty
+        self.reward_iteration_only = reward_iteration_only
         # Setting the spaces: both are continuous, observation box
         # artificially bounded by some large numbers
         # note that because lambda can be complex, U can be complex,
@@ -139,12 +155,18 @@ class SDC_Full_Env(gym.Env):
             #   - reward = -50, if this happens (crucial!)
             err = norm_res > norm_res_old * 100
             if err:
-                reward = -51
+                reward = -self.step_penalty * 51
+                # reward = -51
                 break
             # check for convergence
             done = norm_res < self.restol
-            # penalty for this iteration
-            reward -= 1
+
+        if not err:
+            reward = self.reward_func(
+                self.initial_residual,
+                residual,
+                self.niter,
+            )
 
         done = True
 
@@ -177,6 +199,28 @@ class SDC_Full_Env(gym.Env):
         self.niter = 0
 
         return self.state
+
+    def reward_func(self, old_residual, residual, steps=1):
+        """Return the reward obtained with the `old_residual` with the
+        new `residual`.
+        `steps` indicates how many time steps to penalize.
+        """
+        if not self.reward_iteration_only:
+            return -steps * self.step_penalty
+
+        # reward = -self.initial_residual / 100
+        # reward = -np.linalg.norm(residual, np.inf)
+        reward = abs(
+            (math.log(np.linalg.norm(old_residual * self.norm_factor, np.inf))
+             - math.log(np.linalg.norm(residual * self.norm_factor, np.inf)))
+            / (math.log(np.linalg.norm(self.initial_residual
+                                       * self.norm_factor, np.inf))
+               - math.log(self.restol * self.norm_factor)),
+        )
+        reward *= self.residual_weight
+        # jede der 50 Iterationen wird bestraft
+        reward -= steps * self.step_penalty
+        return reward
 
 
 class SDC_Step_Env(SDC_Full_Env):
@@ -221,20 +265,15 @@ class SDC_Step_Env(SDC_Full_Env):
         done = norm_res < self.restol or self.niter >= 50 or err
 
         if not err:
-            reward = -1
-            factor = 1
-            weight = 0.5
-            new_reward = abs((math.log(np.linalg.norm(old_residual*factor)) - math.log(np.linalg.norm(residual*factor)) ) / (math.log(np.linalg.norm(self.initial_residual*factor)) - math.log(self.restol*factor) )) # summe ueber alle Iterationen liegt auf [0,1] (hoffentlich)
-            new_reward *= weight 
-            new_reward -= 0.01 # jede der 50 Iterationen wird bestraft 
-            #print(new_reward)
-
-
+            reward = self.reward_func(old_residual, residual)
+            # print(reward)
         else:
             # return overall reward of -51
             # (slightly worse than -50 in the "not converged" scenario)
-            reward = -51 + self.niter
-            new_reward = -50+ self.niter
+            reward = -self.step_penalty * (51 - self.niter)
+            # reward = -self.step_penalty * 51
+            # reward = -51 + self.niter
+            # reward = -50 + self.niter
 
         self.state = (u, residual)
 
@@ -243,4 +282,4 @@ class SDC_Step_Env(SDC_Full_Env):
             'niter': self.niter,
             'lam': self.lam,
         }
-        return (self.state, new_reward, done, info)
+        return (self.state, reward, done, info)

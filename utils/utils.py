@@ -104,19 +104,27 @@ def make_env(
     """
     if num_envs is None:
         num_envs = args.num_envs
-    M = kwargs.pop('M', args.M)
-    dt = kwargs.pop('dt', args.dt)
-    restol = kwargs.pop('restol', args.restol)
-    seed = kwargs.pop('seed', args.seed)
+
+    # `kwargs` given via `args`
+    args_kwargs = {}
+    for arg in [
+            'M',
+            'dt',
+            'restol',
+            'norm_factor',
+            'residual_weight',
+            'step_penalty',
+    ]:
+        args_kwargs[arg] = kwargs.pop(arg, getattr(args, arg))
+    all_kwargs = {**kwargs, **args_kwargs}
+
+    seed = all_kwargs.pop('seed', args.seed)
 
     env = DummyVecEnv([
         lambda: gym.make(
             args.envname,
-            M=M,
-            dt=dt,
-            restol=restol,
             seed=seed + i if seed is not None else None,
-            **kwargs,
+            **all_kwargs,
         )
         for i in range(num_envs)
     ])

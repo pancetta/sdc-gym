@@ -36,11 +36,13 @@ def parse_args():
         ),
     )
     parser.add_argument(
-        '--reward_iteration_only', #does only affect sdc-v1
-        type=int,
-        default=True, #use False for the new reward that depends on the residual
+        '--reward_iteration_only',  # does only affect sdc-v1
+        type=bool,
+        # use False for the new reward that depends on the residual
+        default=True,
         help=(
-            'How to reward the agent '
+            'How to reward the agent. '
+            'Set to `False` to reward based on the residual.'
         ),
     )
     parser.add_argument(
@@ -102,6 +104,30 @@ def parse_args():
             'Example for MlpLstmPolicy: '
             '`--policy_kwargs \'{"net_arch": [128, 128, "lstm"]}\'`'
         ),
+    )
+    parser.add_argument(
+        '--norm_factor',
+        type=float,
+        default=1.0,
+        help=(
+            'How to scale residual norms ',
+            '(if `--reward_iteration_only True`).'
+        ),
+    )
+    parser.add_argument(
+        '--residual_weight',
+        type=float,
+        default=0.5,
+        help=(
+            'How to scale the residual reward '
+            '(if `--reward_iteration_only True`).'
+        ),
+    )
+    parser.add_argument(
+        '--step_penalty',
+        type=float,
+        default=0.1,
+        help='Base value to penalize each timestep.',
     )
     parser.add_argument(
         '--tests',
