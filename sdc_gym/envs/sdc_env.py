@@ -1,12 +1,12 @@
 import itertools
 import math
-import numpy as np
-import scipy
 
 import gym
 from gym import spaces
 from gym.utils import seeding
 import matplotlib.pyplot as plt
+import numpy as np
+import scipy
 
 from pySDC.implementations.collocation_classes.gauss_radau_right import \
     CollGaussRadau_Right
