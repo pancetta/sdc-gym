@@ -212,7 +212,7 @@ class SDC_Full_Env(gym.Env):
         new `residual`.
         `steps` indicates how many time steps to penalize.
         """
-        if not self.reward_iteration_only:
+        if self.reward_iteration_only:
             return -steps * self.step_penalty
 
         # reward = -self.initial_residual / 100
