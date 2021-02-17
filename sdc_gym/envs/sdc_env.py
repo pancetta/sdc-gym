@@ -64,7 +64,7 @@ class SDC_Full_Env(gym.Env):
         self.observation_space = spaces.Box(
             low=-1E10,
             high=+1E10,
-            shape=(2, M),
+            shape=(M * 2, 50),
             dtype=np.complex128,
         )
         # I read somewhere that the actions should be scaled to [-1,1],
@@ -78,6 +78,7 @@ class SDC_Full_Env(gym.Env):
 
         self.seed(seed)
         self.state = None
+        self.old_states = np.zeros((M * 2, 50), dtype=np.complex128)
 
     def seed(self, seed=None):
         self.np_random, seed = seeding.np_random(seed)
@@ -157,6 +158,8 @@ class SDC_Full_Env(gym.Env):
             #   - stop if residual gets larger than the initial one
             #     (not needed, but faster)
             #   - reward = -50, if this happens (crucial!)
+            if self.niter < 50:
+                self.old_states[:, self.niter] = np.concatenate((u, residual))
             err = err or norm_res > norm_res_old * 100
             if err:
                 reward = -self.step_penalty * 51
@@ -183,7 +186,7 @@ class SDC_Full_Env(gym.Env):
             'niter': self.niter,
             'lam': self.lam,
         }
-        return (self.state, reward, done, info)
+        return (self.old_states, reward, done, info)
 
     def reset(self):
         # Draw a lambda (here: negative real for starters)
@@ -200,12 +203,17 @@ class SDC_Full_Env(gym.Env):
         self.initial_residual = residual
 
         self.state = (u, residual)
+        # Try if this works instead of the line below it.
+        # I didn't use it for safety, but it's a bit faster.
+        # self.old_states[:] = 0
+        self.old_states = np.zeros((u.size * 2, 50), dtype=np.complex128)
+        self.old_states[:, 0] = np.concatenate((u, residual))
 
         self.rewards.append(self.episode_rewards)
         self.episode_rewards = []
         self.niter = 0
 
-        return self.state
+        return self.old_states
 
     def reward_func(self, old_residual, residual, steps=1):
         """Return the reward obtained with the `old_residual` with the
@@ -324,10 +332,12 @@ class SDC_Step_Env(SDC_Full_Env):
         self.norm_resids.append(norm_res)
 
         self.state = (u, residual)
+        if self.niter < 50:
+            self.old_states[:, self.niter] = np.concatenate((u, residual))
 
         info = {
             'residual': norm_res,
             'niter': self.niter,
             'lam': self.lam,
         }
-        return (self.state, reward, done, info)
+        return (self.old_states, reward, done, info)
