@@ -310,7 +310,7 @@ class SDC_Step_Env(SDC_Full_Env):
         done = norm_res < self.restol or self.niter >= 50 or err
 
         if not err:
-            reward = self.reward_func(old_residual, residual)
+            reward = self.reward_func(old_residual, residual, self.niter)
             # print(reward)
         else:
             # return overall reward of -51
