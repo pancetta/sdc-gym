@@ -1,3 +1,4 @@
+import json
 from pathlib import Path
 import time
 
@@ -66,6 +67,10 @@ def plot_results(results, color, label):
 
 def main():
     args = utils.parse_args()
+    args_path = utils.find_free_path('args_{:>04}.json')
+    with open(args_path, 'w') as f:
+        json.dump(vars(args), f, indent=4)
+
     utils.setup(args.use_sb3, args.debug_nans)
 
     seed = args.seed
