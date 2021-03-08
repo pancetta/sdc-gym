@@ -1,4 +1,5 @@
 use_sb3 = True
+debug_nans = False
 
 from pathlib import Path
 
@@ -8,6 +9,9 @@ if use_sb3:
     from stable_baselines3.common.vec_env import DummyVecEnv, VecCheckNan, \
         VecNormalize
     import stable_baselines3 as stable_baselines
+    if debug_nans:
+        import torch
+        torch.autograd.set_detect_anomaly(True)
 else:
     from stable_baselines.common.callbacks import EvalCallback
     from stable_baselines.common.vec_env import DummyVecEnv, VecCheckNan, \
@@ -169,6 +173,8 @@ def make_env(
             norm_obs=norm_obs,
             norm_reward=norm_reward,
         )
+    if debug_nans:
+        env = VecCheckNan(env, raise_exception=True)
     return env
 
 
