@@ -30,6 +30,9 @@ class SDC_Full_Env(gym.Env):
             restol=None,
             prec=None,
             seed=None,
+            lambda_real_interval=[-100, 0],
+            lambda_imag_interval=[0, 0],
+            lambda_real_interpolation_interval=None,
             norm_factor=1,
             residual_weight=0.5,
             step_penalty=0.1,
@@ -49,6 +52,11 @@ class SDC_Full_Env(gym.Env):
         self.old_res = None
         self.prec = prec
         self.initial_residual = None
+
+        self.lambda_real_interval = lambda_real_interval
+        self.lambda_real_interval_reversed = reversed(lambda_real_interval)
+        self.lambda_imag_interval = lambda_imag_interval
+        self.lambda_real_interpolation_interval = lambda_real_interpolation_interval
 
         self.norm_factor = norm_factor
         self.residual_weight = residual_weight
@@ -201,11 +209,17 @@ class SDC_Full_Env(gym.Env):
         # The number of episodes is always smaller than the number of
         # time steps, keep that in mind for the interpolation
         # hyperparameters.
-        lam_low = -np.interp(self.num_episodes, (100, 1500), (1, 100))
-        # lam_low = -100
-        self.lam = (1 * np.random.uniform(low=lam_low, high=0.0)
-                    + 0j * np.random.uniform(low=0.0, high=10.0))
-        # self.lam = -10
+        if self.lambda_real_interpolation_interval is not None:
+            lam_low = np.interp(self.num_episodes,
+                                self.lambda_real_interpolation_interval,
+                                self.lambda_real_interval_reversed)
+        else:
+            lam_low = self.lambda_real_interval[0]
+        self.lam = (1 * np.random.uniform(low=lam_low,
+                                          high=self.lambda_real_interval[1])
+                    + 1j * np.random.uniform(
+                        low=self.lambda_imag_interval[0],
+                        high=self.lambda_imag_interval[1]))
 
         # Compute the system matrix
         self.C = np.eye(self.coll.num_nodes) - self.lam * self.dt * self.Q
