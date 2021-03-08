@@ -200,7 +200,7 @@ class PPG(PPO):
         self.vf_true_coef = 1.0
         self.max_grad_norm = 0.5
         self.target_kl = None
-        # self.policy_kwargs = None
+        self.policy_kwargs["activation_fn"] = th.nn.Identity
 
     def _setup_model(self) -> None:
         self.aux_lr_schedule = get_schedule_fn(self.aux_learning_rate)
