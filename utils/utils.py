@@ -15,12 +15,21 @@ else:
     import stable_baselines
 
 import sdc_gym  # For side effects only
+import ppg
 
 PPO2_DEFAULT_NUM_MINIBATCHES = 4
 
 
 def get_model_class(model_class_str):
     """Return a model class according to `model_class_str`."""
+    if model_class_str.upper() == 'PPG':
+        if not use_sb3:
+            raise AttributeError(
+                'PPG is only implemented in stable-baselines3. '
+                'Please set `use_sb3 = True`.'
+            )
+        return ppg.PPG
+
     if use_sb3 and model_class_str.upper() == 'PPO2':
         model_class_str = 'PPO'
 
@@ -47,6 +56,11 @@ def get_policy_class(policy_class_str, model_class_str):
     """Return a policy class according to `policy_class_str`.
     `model_class_str` is the model to create the policy for.
     """
+    if use_sb3:
+        if model_class_str.upper() == 'PPG':
+            return 'Aux' + policy_class_str
+        return policy_class_str
+
     if model_class_str.upper() == 'DDPG':
         policy_class_module = stable_baselines.ddpg.policies
     elif model_class_str.upper() == 'DQN':
