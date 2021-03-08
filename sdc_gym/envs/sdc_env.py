@@ -359,8 +359,8 @@ class SDC_Step_Env(SDC_Full_Env):
         else:
             # return overall reward of -51
             # (slightly worse than -50 in the "not converged" scenario)
-            reward = -self.step_penalty * (51 - self.niter)
-            # reward = -self.step_penalty * 51
+            # reward = -self.step_penalty * (52 - self.niter)
+            reward = -self.step_penalty * 51
             # reward = -51 + self.niter
             # reward = -50 + self.niter
 
