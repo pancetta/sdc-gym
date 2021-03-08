@@ -129,6 +129,12 @@ def parse_args():
         help='Base value to penalize each timestep.',
     )
     parser.add_argument(
+        '--collect_states',
+        type=utils.parse_bool,
+        default=False,
+        help='Whether to collect all previous states as input.',
+    )
+    parser.add_argument(
         '--tests',
         type=float,
         default=5000,
