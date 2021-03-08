@@ -125,7 +125,7 @@ def main():
 
     # Not vectorizing is faster for testing for some reason.
     num_test_envs = args.num_envs \
-        if not utils.use_sb3 and policy_class.recurrent else 1
+        if not args.use_sb3 and policy_class.recurrent else 1
 
     ntests = int(args.tests)
     ntests = utils.maybe_fix_ntests(ntests, num_test_envs)
