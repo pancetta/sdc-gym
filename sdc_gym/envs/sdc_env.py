@@ -54,7 +54,7 @@ class SDC_Full_Env(gym.Env):
         self.initial_residual = None
 
         self.lambda_real_interval = lambda_real_interval
-        self.lambda_real_interval_reversed = reversed(lambda_real_interval)
+        self.lambda_real_interval_reversed = list(reversed(lambda_real_interval))
         self.lambda_imag_interval = lambda_imag_interval
         self.lambda_real_interpolation_interval = lambda_real_interpolation_interval
 
