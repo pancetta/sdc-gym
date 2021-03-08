@@ -163,6 +163,15 @@ def parse_args():
             'best performing one. If this is 0, do not evaluate.'
         ),
     )
+    parser.add_argument(
+        '--use_sb3',
+        type=utils.parse_bool,
+        default=utils.has_sb3(),
+        help=(
+            'Whether to use stable-baselines3. '
+            'Defaults to `True` if it is available, otherwise `False`.'
+        ),
+    )
     return parser.parse_args()
 
 
@@ -226,6 +235,8 @@ def plot_results(results, color, label):
 
 def main():
     args = parse_args()
+    utils.setup(args.use_sb3)
+
     seed = args.seed
     eval_seed = seed
     if eval_seed is not None:

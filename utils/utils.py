@@ -1,27 +1,43 @@
-use_sb3 = True
-debug_nans = False
-
 from pathlib import Path
 
 import gym
-if use_sb3:
-    from stable_baselines3.common.callbacks import EvalCallback
-    from stable_baselines3.common.vec_env import DummyVecEnv, VecCheckNan, \
-        VecNormalize
-    import stable_baselines3 as stable_baselines
-    if debug_nans:
-        import torch
-        torch.autograd.set_detect_anomaly(True)
-else:
-    from stable_baselines.common.callbacks import EvalCallback
-    from stable_baselines.common.vec_env import DummyVecEnv, VecCheckNan, \
-        VecNormalize
-    import stable_baselines
 
 import sdc_gym  # For side effects only
 import ppg
 
 PPO2_DEFAULT_NUM_MINIBATCHES = 4
+
+
+def setup(using_sb3, debugging_nans=False):
+    global use_sb3, debug_nans, \
+        EvalCallback, \
+        DummyVecEnv, VecCheckNan, VecNormalize, \
+        stable_baselines
+
+    use_sb3 = using_sb3
+    debug_nans = debugging_nans
+
+    if use_sb3:
+        from stable_baselines3.common.callbacks import EvalCallback
+        from stable_baselines3.common.vec_env import DummyVecEnv, \
+            VecCheckNan, VecNormalize
+        import stable_baselines3 as stable_baselines
+        if debug_nans:
+            import torch
+            torch.autograd.set_detect_anomaly(True)
+    else:
+        from stable_baselines.common.callbacks import EvalCallback
+        from stable_baselines.common.vec_env import DummyVecEnv, \
+            VecCheckNan, VecNormalize
+        import stable_baselines
+
+
+def has_sb3():
+    try:
+        import stable_baselines3
+    except ModuleNotFoundError:
+        return False
+    return True
 
 
 def parse_bool(string):
