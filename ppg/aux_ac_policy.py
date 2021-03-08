@@ -11,6 +11,18 @@ class AuxActorCriticPolicy(ActorCriticPolicy):
         lr_schedule = kwargs.get('lr_schedule', args[2])
         self._build(lr_schedule, aux_lr_schedule)
 
+    # Paper init
+    # @staticmethod
+    # def init_weights(module: th.nn.Module, _gain: float = 1, scale=0.1) -> None:
+    #     """
+    #     Initialization with normalized fan-in (used in PPG paper)
+    #     """
+    #     if isinstance(module, (th.nn.Linear, th.nn.Conv2d)):
+    #         module.weight.data *= scale / module.weight.norm(dim=1, p=2,
+    #                                                          keepdim=True)
+    #         if module.bias is not None:
+    #             module.bias.data.fill_(0.0)
+
     def _build(self, lr_schedule, aux_lr_schedule=None):
         if aux_lr_schedule is None:
             return
