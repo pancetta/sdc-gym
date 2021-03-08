@@ -35,16 +35,6 @@ def parse_args():
         ),
     )
     parser.add_argument(
-        '--reward_iteration_only',  # does only affect sdc-v1
-        type=utils.parse_bool,
-        # use False for the new reward that depends on the residual
-        default=True,
-        help=(
-            'How to reward the agent. '
-            'Set to `False` to reward based on the residual.'
-        ),
-    )
-    parser.add_argument(
         '--restol',
         type=float,
         default=1E-10,
@@ -127,6 +117,15 @@ def parse_args():
         type=float,
         default=0.1,
         help='Base value to penalize each timestep.',
+    )
+    parser.add_argument(
+        '--reward_iteration_only',
+        type=utils.parse_bool,
+        default=True,
+        help=(
+            'How to reward the agent. '
+            'Set to `False` to reward based on the residual.'
+        ),
     )
     parser.add_argument(
         '--collect_states',
