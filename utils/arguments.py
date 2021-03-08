@@ -104,6 +104,19 @@ def parse_args():
         help='Class of model to instantiate.',
     )
     parser.add_argument(
+        '--model_kwargs',
+        type=json.loads,
+        default={},
+        help=(
+            'Keyword arguments for model creation. '
+            'See the documentation for details. '
+            'The other arguments `learning_rate`, `policy_kwargs` and `seed` '
+            'overwrite the values given here. '
+            'Example for PPO: '
+            '`--model_kwargs \'{"gamma": 0.999}\'`'
+        ),
+    )
+    parser.add_argument(
         '--policy_class',
         type=str,
         default='MlpPolicy',

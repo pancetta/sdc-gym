@@ -102,15 +102,18 @@ def main():
 
     model_kwargs = {
         'verbose': 1,
-        'policy_kwargs': policy_kwargs,
         'tensorboard_log': str(Path(
             f'./sdc_tensorboard/'
             f'{args.model_class.lower()}_{args.policy_class.lower()}_'
             f'{script_start}/'
         )),
-        'learning_rate': learning_rate,
-        'seed': seed,
     }
+    model_kwargs.update(args.model_kwargs)
+    model_kwargs.update({
+        'learning_rate': learning_rate,
+        'policy_kwargs': policy_kwargs,
+        'seed': seed,
+    })
 
     utils.check_num_envs(args, policy_class)
     utils.maybe_fix_nminibatches(model_kwargs, args, policy_class)
