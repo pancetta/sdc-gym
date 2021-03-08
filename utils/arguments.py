@@ -176,7 +176,7 @@ def parse_args():
     parser.add_argument(
         '--seed',
         type=int,
-        default=None,
+        default=0,
         help=(
             'Base seed for seeding the environments. For multiple '
             'environments, all will have different seeds based on this one.'
