@@ -55,9 +55,9 @@ class SDC_Full_Env(gym.Env):
         self.reward_iteration_only = reward_iteration_only
 
         self.num_episodes = 0
-        self.rewards = []
-        self.episode_rewards = []
-        self.norm_resids = []
+        # self.rewards = []
+        # self.episode_rewards = []
+        # self.norm_resids = []
         # Setting the spaces: both are continuous, observation box
         # artificially bounded by some large numbers
         # note that because lambda can be complex, U can be complex,
@@ -177,8 +177,8 @@ class SDC_Full_Env(gym.Env):
             )
 
         done = True
-        self.episode_rewards.append(reward)
-        self.norm_resids.append(norm_res)
+        # self.episode_rewards.append(reward)
+        # self.norm_resids.append(norm_res)
 
         self.state = (u, residual)
 
@@ -216,8 +216,8 @@ class SDC_Full_Env(gym.Env):
         self.old_states = np.zeros((u.size * 2, 50), dtype=np.complex128)
         self.old_states[:, 0] = np.concatenate((u, residual))
 
-        self.rewards.append(self.episode_rewards)
-        self.episode_rewards = []
+        # self.rewards.append(self.episode_rewards)
+        # self.episode_rewards = []
         self.niter = 0
 
         return self.old_states
@@ -335,8 +335,8 @@ class SDC_Step_Env(SDC_Full_Env):
             # reward = -51 + self.niter
             # reward = -50 + self.niter
 
-        self.episode_rewards.append(reward)
-        self.norm_resids.append(norm_res)
+        # self.episode_rewards.append(reward)
+        # self.norm_resids.append(norm_res)
 
         self.state = (u, residual)
         if self.niter < 50:
