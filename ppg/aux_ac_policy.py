@@ -13,7 +13,7 @@ class AuxActorCriticPolicy(ActorCriticPolicy):
 
     # Paper init
     # @staticmethod
-    # def init_weights(module: th.nn.Module, _gain: float = 1, scale=0.1) -> None:
+    # def init_weights(module: th.nn.Module, gain: float = 1, scale=0.1) -> None:
     #     """
     #     Initialization with normalized fan-in (used in PPG paper)
     #     """
