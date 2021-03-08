@@ -96,6 +96,15 @@ def parse_args():
             'of environments.'
         ),
     )
+    parser.add_argument(
+        '--activation_fn',
+        type=str,
+        default=None,
+        help=(
+            'Policy activation function to use. '
+            "Defaults to the policy's default."
+        ),
+    )
 
     parser.add_argument(
         '--model_class',

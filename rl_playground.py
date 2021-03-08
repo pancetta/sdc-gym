@@ -90,6 +90,9 @@ def main():
     policy_class = utils.get_policy_class(args.policy_class, args.model_class)
 
     policy_kwargs = args.policy_kwargs
+    if args.activation_fn is not None:
+        policy_kwargs['activation_fn'] = utils.get_activation_fn(
+            args.activation_fn)
 
     # Learning rate to try for PPO2: 1E-05
     # Learning rate to try for ACKTR: 1E-03

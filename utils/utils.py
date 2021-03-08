@@ -12,7 +12,7 @@ def setup(using_sb3, debugging_nans=False):
     global use_sb3, debug_nans, \
         EvalCallback, \
         DummyVecEnv, VecCheckNan, VecNormalize, \
-        stable_baselines
+        stable_baselines, act_fns
 
     use_sb3 = using_sb3
     debug_nans = debugging_nans
@@ -22,6 +22,7 @@ def setup(using_sb3, debugging_nans=False):
         from stable_baselines3.common.vec_env import DummyVecEnv, \
             VecCheckNan, VecNormalize
         import stable_baselines3 as stable_baselines
+        import torch.nn as act_fns
         if debug_nans:
             import torch
             torch.autograd.set_detect_anomaly(True)
@@ -29,6 +30,7 @@ def setup(using_sb3, debugging_nans=False):
         from stable_baselines.common.callbacks import EvalCallback
         from stable_baselines.common.vec_env import DummyVecEnv, \
             VecCheckNan, VecNormalize
+        from stable_baselines.common import tf_layers as act_fns
         import stable_baselines
 
 
@@ -114,6 +116,21 @@ def get_policy_class(policy_class_str, model_class_str):
     ), ('policy class must be a subclass of '
         '`stable_baselines.common.policies.BasePolicy`')
     return policy_class
+
+
+def get_activation_fn(activation_fn_str):
+    "Return an activation function given by `activation_fn_str`."
+    try:
+        activation_fn = getattr(act_fns, activation_fn_str)
+    except AttributeError:
+        err_string = (f'could not find activation function '
+                      f"'{activation_fn_str}' in module ")
+        if use_sb3:
+            err_string = f'{err_string}`torch.nn`'
+        else:
+            err_string = f'{err_string}`stable_baselines.common.tf_layers`'
+        raise AttributeError(err_string)
+    return activation_fn
 
 
 def maybe_fix_ntests(ntests_given, num_test_envs):
