@@ -14,7 +14,7 @@ else:
         VecNormalize
     import stable_baselines
 
-import sdc_gym
+import sdc_gym  # For side effects only
 
 PPO2_DEFAULT_NUM_MINIBATCHES = 4
 

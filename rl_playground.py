@@ -47,7 +47,7 @@ def parse_args():
     parser.add_argument(
         '--restol',
         type=float,
-        default=1E-10, #1E-10,
+        default=1E-10,
         help=(
             'Residual tolerance; '
             'when residual is below this, stop iterating.'
@@ -266,7 +266,7 @@ def main():
     model.learn(total_timesteps=int(args.steps), callback=eval_callback)
     duration = time.perf_counter() - start_time
     print(f'Training took {duration} seconds.')
-    env.envs[0].plot_rewards()
+    # env.envs[0].plot_rewards()
 
     fname = Path(f'sdc_model_{args.model_class.lower()}_'
                  f'{args.policy_class.lower()}_{learning_rate}.zip')
