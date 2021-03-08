@@ -158,6 +158,8 @@ def make_env(
             'norm_factor',
             'residual_weight',
             'step_penalty',
+            'reward_iteration_only',
+            'collect_states',
     ]:
         args_kwargs[arg] = kwargs.pop(arg, getattr(args, arg))
     all_kwargs = {**kwargs, **args_kwargs}
