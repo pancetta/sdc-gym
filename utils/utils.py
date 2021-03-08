@@ -1,9 +1,18 @@
+use_sb3 = True
+
 from pathlib import Path
 
 import gym
-from stable_baselines.common.callbacks import EvalCallback
-from stable_baselines.common.vec_env import DummyVecEnv, VecNormalize
-import stable_baselines
+if use_sb3:
+    from stable_baselines3.common.callbacks import EvalCallback
+    from stable_baselines3.common.vec_env import DummyVecEnv, VecCheckNan, \
+        VecNormalize
+    import stable_baselines3 as stable_baselines
+else:
+    from stable_baselines.common.callbacks import EvalCallback
+    from stable_baselines.common.vec_env import DummyVecEnv, VecCheckNan, \
+        VecNormalize
+    import stable_baselines
 
 import sdc_gym
 
@@ -12,6 +21,9 @@ PPO2_DEFAULT_NUM_MINIBATCHES = 4
 
 def get_model_class(model_class_str):
     """Return a model class according to `model_class_str`."""
+    if use_sb3 and model_class_str.upper() == 'PPO2':
+        model_class_str = 'PPO'
+
     try:
         model_class = getattr(stable_baselines, model_class_str)
     except AttributeError:
@@ -19,9 +31,15 @@ def get_model_class(model_class_str):
             f"could not find model class '{model_class_str}' "
             f'in module `stable_baselines`'
         )
-    assert issubclass(model_class, stable_baselines.common.BaseRLModel), \
-        ('model class must be a subclass of '
-         '`stable_baselines.common.BaseRLModel`')
+    if use_sb3:
+        assert issubclass(
+            model_class, stable_baselines.common.base_class.BaseAlgorithm), \
+            ('model class must be a subclass of '
+             '`stable_baselines3.common.base_class.BaseAlgorithm`')
+    else:
+        assert issubclass(model_class, stable_baselines.common.BaseRLModel), \
+            ('model class must be a subclass of '
+             '`stable_baselines.common.BaseRLModel`')
     return model_class
 
 
@@ -173,7 +191,7 @@ def check_num_envs(args, policy_class):
     """Raise an error if the number of environments will cause issues with
     the model.
     """
-    if not policy_class.recurrent:
+    if use_sb3 or not policy_class.recurrent:
         return
     if args.num_envs != 1:
         if args.eval_freq > 0:
@@ -201,7 +219,7 @@ def maybe_fix_nminibatches(model_kwargs, args, policy_class):
     Print a warning as well if the value had to be changed.
     Only affects the `PPO2` model.
     """
-    if args.model_class != 'PPO2' or not policy_class.recurrent:
+    if args.model_class != 'PPO2' or use_sb3 or not policy_class.recurrent:
         return
 
     nminibatches = model_kwargs.get(
