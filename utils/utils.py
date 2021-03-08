@@ -171,6 +171,11 @@ def make_env(
             'M',
             'dt',
             'restol',
+
+            'lambda_real_interval',
+            'lambda_imag_interval',
+            'lambda_real_interpolation_interval',
+
             'norm_factor',
             'residual_weight',
             'step_penalty',

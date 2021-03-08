@@ -41,6 +41,31 @@ def parse_args():
         ),
     )
     parser.add_argument(
+        '--lambda_real_interval',
+        type=int,
+        nargs=2,
+        default=[-100, 0],
+        help='Interval to sample the real part of lambda from.',
+    )
+    parser.add_argument(
+        '--lambda_imag_interval',
+        type=int,
+        nargs=2,
+        default=[0, 0],
+        help='Interval to sample the imaginary part of lambda from.',
+    )
+    parser.add_argument(
+        '--lambda_real_interpolation_interval',
+        type=int,
+        nargs=2,
+        default=None,
+        help=(
+            'Interval of number of episodes to resize the real interval of '
+            'lambda with (by decreasing the lower limit). '
+            'By default, do not resize.'
+        ),
+    )
+    parser.add_argument(
         '--envname',
         type=str,
         default='sdc-v0',
