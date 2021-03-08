@@ -66,7 +66,7 @@ def get_model_class(model_class_str):
     except AttributeError:
         raise AttributeError(
             f"could not find model class '{model_class_str}' "
-            f'in module `stable_baselines`'
+            f'in module `stable_baselines{"3" if use_sb3 else ""}`'
         )
     if use_sb3:
         assert issubclass(
