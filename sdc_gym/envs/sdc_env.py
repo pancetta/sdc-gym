@@ -54,6 +54,7 @@ class SDC_Full_Env(gym.Env):
         self.step_penalty = step_penalty
         self.reward_iteration_only = reward_iteration_only
 
+        self.num_episodes = 0
         self.rewards = []
         self.episode_rewards = []
         self.norm_resids = []
@@ -189,8 +190,14 @@ class SDC_Full_Env(gym.Env):
         return (self.old_states, reward, done, info)
 
     def reset(self):
+        self.num_episodes += 1
         # Draw a lambda (here: negative real for starters)
-        self.lam = (1 * np.random.uniform(low=-100.0, high=0.0)
+        # The number of episodes is always smaller than the number of
+        # time steps, keep that in mind for the interpolation
+        # hyperparameters.
+        lam_low = -np.interp(self.num_episodes, (100, 1500), (1, 100))
+        # lam_low = -100
+        self.lam = (1 * np.random.uniform(low=lam_low, high=0.0)
                     + 0j * np.random.uniform(low=0.0, high=10.0))
         # self.lam = -10
 
