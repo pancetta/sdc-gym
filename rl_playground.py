@@ -1,3 +1,4 @@
+import datetime
 import json
 from pathlib import Path
 import time
@@ -66,8 +67,10 @@ def plot_results(results, color, label):
 
 
 def main():
+    script_start = str(datetime.datetime.now()
+                       ).replace(':', '-').replace(' ', 'T')
     args = utils.parse_args()
-    args_path = utils.find_free_path('args_{:>04}.json')
+    args_path = Path(f'args_{script_start}.json')
     with open(args_path, 'w') as f:
         json.dump(vars(args), f, indent=4)
 
@@ -94,14 +97,16 @@ def main():
     if args.rescale_lr:
         learning_rate *= args.num_envs
 
-    eval_callback = utils.create_eval_callback(args, learning_rate)
+    eval_callback = utils.create_eval_callback(args, learning_rate,
+                                               script_start)
 
     model_kwargs = {
         'verbose': 1,
         'policy_kwargs': policy_kwargs,
         'tensorboard_log': str(Path(
             f'./sdc_tensorboard/'
-            f'{args.model_class.lower()}_{args.policy_class.lower()}/'
+            f'{args.model_class.lower()}_{args.policy_class.lower()}_'
+            f'{script_start}/'
         )),
         'learning_rate': learning_rate,
         'seed': seed,
@@ -121,7 +126,8 @@ def main():
     # env.envs[0].plot_rewards()
 
     fname = Path(f'sdc_model_{args.model_class.lower()}_'
-                 f'{args.policy_class.lower()}_{learning_rate}.zip')
+                 f'{args.policy_class.lower()}_{learning_rate}_'
+                 f'{script_start}.zip')
     model.save(str(fname))
     # delete trained model to demonstrate loading, not really necessary
     # del model
@@ -178,7 +184,7 @@ def main():
 
     plt.legend()
 
-    fig_path = utils.find_free_path('results_{:>04}.pdf')
+    fig_path = Path(f'results_{script_start}.pdf')
     plt.savefig(fig_path, bbox_inches='tight')
 
     plt.show()

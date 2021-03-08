@@ -207,7 +207,7 @@ def make_env(
     return env
 
 
-def create_eval_callback(args, learning_rate):
+def create_eval_callback(args, learning_rate, script_start):
     if args.eval_freq <= 0:
         return None
 
@@ -225,7 +225,8 @@ def create_eval_callback(args, learning_rate):
     )
 
     best_dirname = Path(f'best_sdc_model_{args.model_class.lower()}_'
-                        f'{args.policy_class.lower()}_{learning_rate}')
+                        f'{args.policy_class.lower()}_{learning_rate}_'
+                        f'{script_start}')
     eval_callback = EvalCallback(
         eval_env,
         best_model_save_path=str(best_dirname),
