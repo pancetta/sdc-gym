@@ -172,6 +172,12 @@ def parse_args():
             'Defaults to `True` if it is available, otherwise `False`.'
         ),
     )
+    parser.add_argument(
+        '--debug_nans',
+        type=utils.parse_bool,
+        default=False,
+        help='Whether to enable NaN debugging.',
+    )
     return parser.parse_args()
 
 
@@ -235,7 +241,7 @@ def plot_results(results, color, label):
 
 def main():
     args = parse_args()
-    utils.setup(args.use_sb3)
+    utils.setup(args.use_sb3, args.debug_nans)
 
     seed = args.seed
     eval_seed = seed
