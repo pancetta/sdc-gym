@@ -240,6 +240,9 @@ class PPG(PPO):
             with th.no_grad():
                 start_idx = 0
                 while start_idx < len(indices):
+                    if self.use_sde:
+                        self.policy.reset_noise(self.batch_size)
+
                     batch_indices = indices[
                         start_idx:start_idx + self.aux_batch_size]
                     obs = self.rollout_buffer.observations[batch_indices]
@@ -255,6 +258,9 @@ class PPG(PPO):
             for aux_epoch in range(self.n_aux_epochs):
                 start_idx = 0
                 while start_idx < len(indices):
+                    if self.use_sde:
+                        self.policy.reset_noise(self.batch_size)
+
                     batch_indices = indices[
                         start_idx:start_idx + self.aux_batch_size]
                     obs = self.rollout_buffer.observations[batch_indices]
