@@ -218,10 +218,10 @@ class SDC_Full_Env(gym.Env):
         else:
             lam_low = self.lambda_real_interval[0]
         self.lam = (
-            1 * np.random.uniform(
+            1 * self.np_random.uniform(
                 low=lam_low,
                 high=self.lambda_real_interval[1])
-            + 1j * np.random.uniform(
+            + 1j * self.np_random.uniform(
                 low=self.lambda_imag_interval[0],
                 high=self.lambda_imag_interval[1])
         )
