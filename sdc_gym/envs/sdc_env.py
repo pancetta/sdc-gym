@@ -54,9 +54,11 @@ class SDC_Full_Env(gym.Env):
         self.initial_residual = None
 
         self.lambda_real_interval = lambda_real_interval
-        self.lambda_real_interval_reversed = list(reversed(lambda_real_interval))
+        self.lambda_real_interval_reversed = list(
+            reversed(lambda_real_interval))
         self.lambda_imag_interval = lambda_imag_interval
-        self.lambda_real_interpolation_interval = lambda_real_interpolation_interval
+        self.lambda_real_interpolation_interval = \
+            lambda_real_interpolation_interval
 
         self.norm_factor = norm_factor
         self.residual_weight = residual_weight
@@ -94,7 +96,7 @@ class SDC_Full_Env(gym.Env):
 
     def seed(self, seed=None):
         self.np_random, seed = seeding.np_random(seed)
-        return [seed]
+        return seed
 
     def _get_prec(self, scaled_action, M):
         """Return a preconditioner based on the `scaled_action`.
@@ -215,11 +217,14 @@ class SDC_Full_Env(gym.Env):
                                 self.lambda_real_interval_reversed)
         else:
             lam_low = self.lambda_real_interval[0]
-        self.lam = (1 * np.random.uniform(low=lam_low,
-                                          high=self.lambda_real_interval[1])
-                    + 1j * np.random.uniform(
-                        low=self.lambda_imag_interval[0],
-                        high=self.lambda_imag_interval[1]))
+        self.lam = (
+            1 * np.random.uniform(
+                low=lam_low,
+                high=self.lambda_real_interval[1])
+            + 1j * np.random.uniform(
+                low=self.lambda_imag_interval[0],
+                high=self.lambda_imag_interval[1])
+        )
 
         # Compute the system matrix
         self.C = np.eye(self.coll.num_nodes) - self.lam * self.dt * self.Q
