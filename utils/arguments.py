@@ -12,6 +12,7 @@ def parse_args():
         default=10000,
         help='Number of action steps to take in the environment.',
     )
+
     parser.add_argument(
         '--M',
         type=int,
@@ -40,6 +41,7 @@ def parse_args():
             'Lower means better solution but more iterations.'
         ),
     )
+
     parser.add_argument(
         '--lambda_real_interval',
         type=int,
@@ -65,6 +67,7 @@ def parse_args():
             'By default, do not resize.'
         ),
     )
+
     parser.add_argument(
         '--envname',
         type=str,
@@ -76,6 +79,7 @@ def parse_args():
             'a single iteration per step (with intermediate observations).'
         ),
     )
+
     parser.add_argument(
         '--learning_rate',
         type=float,
@@ -92,6 +96,7 @@ def parse_args():
             'of environments.'
         ),
     )
+
     parser.add_argument(
         '--model_class',
         type=str,
@@ -115,6 +120,7 @@ def parse_args():
             '`--policy_kwargs \'{"net_arch": [128, 128, "lstm"]}\'`'
         ),
     )
+
     parser.add_argument(
         '--norm_factor',
         type=float,
@@ -154,6 +160,7 @@ def parse_args():
         default=False,
         help='Whether to collect all previous states as input.',
     )
+
     parser.add_argument(
         '--tests',
         type=float,
@@ -184,6 +191,7 @@ def parse_args():
             'best performing one. If this is 0, do not evaluate.'
         ),
     )
+
     parser.add_argument(
         '--use_sb3',
         type=utils.parse_bool,
@@ -199,4 +207,5 @@ def parse_args():
         default=False,
         help='Whether to enable NaN debugging.',
     )
+
     return parser.parse_args()
