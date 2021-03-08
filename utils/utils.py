@@ -24,6 +24,12 @@ import ppg
 PPO2_DEFAULT_NUM_MINIBATCHES = 4
 
 
+def parse_bool(string):
+    assert string == 'False' or string == 'True', \
+        'please only use "False" or "True" as boolean arguments.'
+    return string != 'False'
+
+
 def get_model_class(model_class_str):
     """Return a model class according to `model_class_str`."""
     if model_class_str.upper() == 'PPG':

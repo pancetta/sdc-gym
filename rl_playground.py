@@ -36,7 +36,7 @@ def parse_args():
     )
     parser.add_argument(
         '--reward_iteration_only',  # does only affect sdc-v1
-        type=bool,
+        type=utils.parse_bool,
         # use False for the new reward that depends on the residual
         default=True,
         help=(
@@ -74,7 +74,7 @@ def parse_args():
     )
     parser.add_argument(
         '--rescale_lr',
-        type=bool,
+        type=utils.parse_bool,
         default=True,
         help=(
             'Whether to rescale the learning rate by the number'
