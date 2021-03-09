@@ -100,8 +100,8 @@ def main():
     if args.rescale_lr:
         learning_rate *= args.num_envs
 
-    eval_callback = utils.create_eval_callback(args, learning_rate,
-                                               script_start)
+    eval_callback = utils.create_eval_callback(
+        args, learning_rate, script_start)
 
     model_kwargs = {
         'verbose': 1,
