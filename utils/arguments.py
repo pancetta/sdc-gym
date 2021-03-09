@@ -1,5 +1,7 @@
 import argparse
 import json
+from pathlib import Path
+import subprocess
 
 import utils
 
@@ -236,4 +238,11 @@ def parse_args():
         help='Whether to enable NaN debugging.',
     )
 
-    return parser.parse_args()
+    args = parser.parse_args()
+
+    git_dir = Path(__file__).parent.parent / '.git'
+    git_hash = subprocess.run(['git', '--git-dir', git_dir,
+                               'rev-parse', 'HEAD'],
+                              stdout=subprocess.PIPE).stdout
+    args.git_hash = git_hash.decode().rstrip()
+    return args
