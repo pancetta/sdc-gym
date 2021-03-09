@@ -198,6 +198,8 @@ def main():
     duration = time.perf_counter() - start_time
     print(f'Training took {duration} seconds.')
     # env.envs[0].plot_rewards()
+    print('Number of episodes in each environment:',
+          [env_.num_episodes for env_ in env.envs])
 
     fname = Path(f'sdc_model_{args.model_class.lower()}_'
                  f'{args.policy_class.lower()}_{script_start}.zip')
