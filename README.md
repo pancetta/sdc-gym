@@ -1,8 +1,9 @@
 # sdc-gym
 
-The main script is <./rl_playground.py>. For command line arguments,
-see <./utils/arguments.py>. There are some recommended defaults to set
-below.
+The main script is [./rl_playground.py](./rl_playground.py). For
+command line arguments, see
+[./utils/arguments.py](./utils/arguments.py). There are some
+recommended defaults to set below.
 
 The command line arguments given are automatically saved upon script
 start. Most files saved are stored with the starting time of the
