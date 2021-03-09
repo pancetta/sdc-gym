@@ -99,8 +99,7 @@ def main():
     # Learning rate to try for ACKTR: 1E-03
     learning_rate = utils.compute_learning_rate(args)
 
-    eval_callback = utils.create_eval_callback(
-        args, learning_rate, script_start)
+    eval_callback = utils.create_eval_callback(args)
 
     model_kwargs = {
         'verbose': 1,
@@ -131,8 +130,7 @@ def main():
     # env.envs[0].plot_rewards()
 
     fname = Path(f'sdc_model_{args.model_class.lower()}_'
-                 f'{args.policy_class.lower()}_{learning_rate}_'
-                 f'{script_start}.zip')
+                 f'{args.policy_class.lower()}_{script_start}.zip')
     model.save(str(fname))
     # delete trained model to demonstrate loading, not really necessary
     # del model
