@@ -8,6 +8,42 @@ import matplotlib.pyplot as plt
 import utils
 
 
+def setup_model(args, env):
+    "Return the model for the given `args` in the Gym `env`."
+    model_class = utils.get_model_class(args.model_class)
+    policy_class = utils.get_policy_class(args.policy_class, args.model_class)
+
+    policy_kwargs = args.policy_kwargs
+    if args.activation_fn is not None:
+        policy_kwargs['activation_fn'] = utils.get_activation_fn(
+            args.activation_fn)
+
+    # Learning rate to try for PPO2: 1E-05
+    # Learning rate to try for ACKTR: 1E-03
+    learning_rate = utils.compute_learning_rate(args)
+
+    model_kwargs = {
+        'verbose': 1,
+        'tensorboard_log': str(Path(
+            f'./sdc_tensorboard/'
+            f'{args.model_class.lower()}_{args.policy_class.lower()}_'
+            f'{args.script_start}/'
+        )),
+    }
+    model_kwargs.update(args.model_kwargs)
+    model_kwargs.update({
+        'learning_rate': learning_rate,
+        'policy_kwargs': policy_kwargs,
+        'seed': args.seed,
+    })
+
+    utils.check_num_envs(args, policy_class)
+    utils.maybe_fix_nminibatches(model_kwargs, args, policy_class)
+
+    model = model_class(policy_class, env, **model_kwargs)
+    return model
+
+
 def test_model(model, env, ntests, name):
     """Test the `model` in the Gym `env` `ntests` times.
     `name` is the name for the test run for logging purposes.
@@ -142,8 +178,7 @@ def main():
 
     utils.setup(args.use_sb3, args.debug_nans)
 
-    seed = args.seed
-    eval_seed = seed
+    eval_seed = args.seed
     if eval_seed is not None:
         eval_seed += args.num_envs
 
@@ -152,39 +187,9 @@ def main():
     # Set up gym environment
     env = utils.make_env(args, include_norm=True)
     # Set up model
-    model_class = utils.get_model_class(args.model_class)
-    policy_class = utils.get_policy_class(args.policy_class, args.model_class)
-
-    policy_kwargs = args.policy_kwargs
-    if args.activation_fn is not None:
-        policy_kwargs['activation_fn'] = utils.get_activation_fn(
-            args.activation_fn)
-
-    # Learning rate to try for PPO2: 1E-05
-    # Learning rate to try for ACKTR: 1E-03
-    learning_rate = utils.compute_learning_rate(args)
+    model = setup_model(args, env)
 
     eval_callback = utils.create_eval_callback(args)
-
-    model_kwargs = {
-        'verbose': 1,
-        'tensorboard_log': str(Path(
-            f'./sdc_tensorboard/'
-            f'{args.model_class.lower()}_{args.policy_class.lower()}_'
-            f'{script_start}/'
-        )),
-    }
-    model_kwargs.update(args.model_kwargs)
-    model_kwargs.update({
-        'learning_rate': learning_rate,
-        'policy_kwargs': policy_kwargs,
-        'seed': seed,
-    })
-
-    utils.check_num_envs(args, policy_class)
-    utils.maybe_fix_nminibatches(model_kwargs, args, policy_class)
-
-    model = model_class(policy_class, env, **model_kwargs)
 
     start_time = time.perf_counter()
     # Train the model (need to put at least 100k steps to
