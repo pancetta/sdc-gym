@@ -214,11 +214,19 @@ def make_env(
     ])
     if include_norm:
         # When training, set `norm_reward = True`, I hear...
-        env = VecNormalize(
-            env,
-            norm_obs=norm_obs,
-            norm_reward=norm_reward,
-        )
+        if 'gamma' in args.model_kwargs:
+            env = VecNormalize(
+                env,
+                norm_obs=norm_obs,
+                norm_reward=norm_reward,
+                gamma=args.model_kwargs['gamma'],
+            )
+        else:
+            env = VecNormalize(
+                env,
+                norm_obs=norm_obs,
+                norm_reward=norm_reward,
+            )
     if debug_nans:
         env = VecCheckNan(env, raise_exception=True)
     return env
