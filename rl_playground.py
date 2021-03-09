@@ -66,6 +66,71 @@ def plot_results(results, color, label):
     )
 
 
+def run_tests(model, args, seed=None, fig_path=None):
+    """Run tests for the given `model` and `args`, using `seed` as the
+    random seed.
+
+    `fig_path` is an optional path to store result plots at.
+    """
+    policy_class = utils.get_policy_class(args.policy_class, args.model_class)
+
+    # Not vectorizing is faster for testing for some reason.
+    num_test_envs = args.num_envs \
+        if not args.use_sb3 and policy_class.recurrent else 1
+
+    ntests = int(args.tests)
+    ntests = utils.maybe_fix_ntests(ntests, num_test_envs)
+
+    # Load the trained agent for testing
+    if isinstance(model, str):
+        model_class = utils.get_model_class(args.model_class)
+        model = model_class.load(model)
+
+    start_time = time.perf_counter()
+    # Test the trained model.
+    env = utils.make_env(args, num_envs=num_test_envs, seed=seed)
+    results_RL = test_model(model, env, ntests, 'RL')
+
+    # Restart the whole thing, but now using the LU preconditioner (no RL here)
+    # LU is serial and the de-facto standard. Beat this (or at least be on par)
+    # and we win!
+    env = utils.make_env(
+        args,
+        num_envs=num_test_envs,
+        prec='LU',
+        seed=seed,
+    )
+    results_LU = test_model(model, env, ntests, 'LU')
+
+    # Restart the whole thing, but now using the minization preconditioner
+    # (no RL here)
+    # This minimization approach are just magic numbers we found using
+    # indiesolver.com, parallel and proof-of-concept
+    env = utils.make_env(
+        args,
+        num_envs=num_test_envs,
+        prec='min',
+        seed=seed,
+    )
+    results_min = test_model(model, env, ntests, 'MIN')
+    duration = time.perf_counter() - start_time
+    print(f'Testing took {duration} seconds.')
+
+    # Plot all three iteration counts over the lambda values
+    plt.xlabel('re(λ)')
+    plt.ylabel('iterations')
+
+    plot_results(results_RL, color='b', label='RL')
+    plot_results(results_LU, color='r', label='LU')
+    plot_results(results_min, color='g', label='MIN')
+
+    plt.legend()
+
+    if fig_path is not None:
+        plt.savefig(fig_path, bbox_inches='tight')
+    plt.show()
+
+
 def main():
     script_start = str(datetime.datetime.now()
                        ).replace(':', '-').replace(' ', 'T')
@@ -137,60 +202,8 @@ def main():
 
     # ---------------- TESTING STARTS HERE ----------------
 
-    # Not vectorizing is faster for testing for some reason.
-    num_test_envs = args.num_envs \
-        if not args.use_sb3 and policy_class.recurrent else 1
-
-    ntests = int(args.tests)
-    ntests = utils.maybe_fix_ntests(ntests, num_test_envs)
-
-    # Load the trained agent for testing
-    # model = model_class.load(fname)
-
-    start_time = time.perf_counter()
-    # Test the trained model.
-    env = utils.make_env(args, num_envs=num_test_envs, seed=eval_seed)
-    results_RL = test_model(model, env, ntests, 'RL')
-
-    # Restart the whole thing, but now using the LU preconditioner (no RL here)
-    # LU is serial and the de-facto standard. Beat this (or at least be on par)
-    # and we win!
-    env = utils.make_env(
-        args,
-        num_envs=num_test_envs,
-        prec='LU',
-        seed=eval_seed,
-    )
-    results_LU = test_model(model, env, ntests, 'LU')
-
-    # Restart the whole thing, but now using the minization preconditioner
-    # (no RL here)
-    # This minimization approach are just magic numbers we found using
-    # indiesolver.com, parallel and proof-of-concept
-    env = utils.make_env(
-        args,
-        num_envs=num_test_envs,
-        prec='min',
-        seed=eval_seed,
-    )
-    results_min = test_model(model, env, ntests, 'MIN')
-    duration = time.perf_counter() - start_time
-    print(f'Testing took {duration} seconds.')
-
-    # Plot all three iteration counts over the lambda values
-    plt.xlabel('re(λ)')
-    plt.ylabel('iterations')
-
-    plot_results(results_RL, color='b', label='RL')
-    plot_results(results_LU, color='r', label='LU')
-    plot_results(results_min, color='g', label='MIN')
-
-    plt.legend()
-
     fig_path = Path(f'results_{script_start}.pdf')
-    plt.savefig(fig_path, bbox_inches='tight')
-
-    plt.show()
+    run_tests(model, args, seed=eval_seed, fig_path=fig_path)
 
 
 if __name__ == '__main__':
