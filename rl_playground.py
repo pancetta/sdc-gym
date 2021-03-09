@@ -97,9 +97,7 @@ def main():
 
     # Learning rate to try for PPO2: 1E-05
     # Learning rate to try for ACKTR: 1E-03
-    learning_rate = args.learning_rate
-    if args.rescale_lr:
-        learning_rate *= args.num_envs
+    learning_rate = utils.compute_learning_rate(args)
 
     eval_callback = utils.create_eval_callback(
         args, learning_rate, script_start)

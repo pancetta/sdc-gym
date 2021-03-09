@@ -133,6 +133,12 @@ def get_activation_fn(activation_fn_str):
     return activation_fn
 
 
+def compute_learning_rate(args):
+    learning_rate = args.learning_rate
+    if args.rescale_lr:
+        learning_rate *= args.num_envs
+
+
 def maybe_fix_ntests(ntests_given, num_test_envs):
     """Return `ntests_given` approximately scaled to a vectorized environment
     with `num_test_envs` parallel environments.
