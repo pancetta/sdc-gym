@@ -137,6 +137,7 @@ def compute_learning_rate(args):
     learning_rate = args.learning_rate
     if args.rescale_lr:
         learning_rate *= args.num_envs
+    return learning_rate
 
 
 def maybe_fix_ntests(ntests_given, num_test_envs):
