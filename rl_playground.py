@@ -70,6 +70,7 @@ def main():
     script_start = str(datetime.datetime.now()
                        ).replace(':', '-').replace(' ', 'T')
     args = utils.parse_args()
+    args.script_start = script_start
     args_path = Path(f'args_{script_start}.json')
     with open(args_path, 'w') as f:
         json.dump(vars(args), f, indent=4)
