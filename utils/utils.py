@@ -163,7 +163,6 @@ def make_env(
         args,
         num_envs=None,
         include_norm=False,
-        norm_obs=False,
         norm_reward=True,
         **kwargs,
 ):
@@ -174,8 +173,8 @@ def make_env(
     for a more detailed explanation on their interaction.
     `include_norm` specifies whether the environment is wrapped in a
     normalizing environment.
-    `norm_obs` and `norm_reward` indicate whether the observations or
-    rewards are normalized (only revelant if `include_norm is True`).
+    `norm_reward` indicates whether the rewards are normalized (only
+    revelant if `include_norm is True`).
     `kwargs` are passed directly to the environment creation function. Any
     value given via `kwargs` has priority over the one given by `args`.
     """
@@ -217,14 +216,14 @@ def make_env(
         if 'gamma' in args.model_kwargs:
             env = VecNormalize(
                 env,
-                norm_obs=norm_obs,
+                norm_obs=args.norm_obs,
                 norm_reward=norm_reward,
                 gamma=args.model_kwargs['gamma'],
             )
         else:
             env = VecNormalize(
                 env,
-                norm_obs=norm_obs,
+                norm_obs=args.norm_obs,
                 norm_reward=norm_reward,
             )
     if debug_nans:

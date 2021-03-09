@@ -79,6 +79,12 @@ def parse_args():
             'a single iteration per step (with intermediate observations).'
         ),
     )
+    parser.add_argument(
+        '--norm_obs',
+        type=utils.parse_bool,
+        default=False,
+        help='Whether to normalize the observations during training.',
+    )
 
     parser.add_argument(
         '--learning_rate',
