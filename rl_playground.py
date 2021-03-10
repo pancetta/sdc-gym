@@ -124,9 +124,9 @@ def run_tests(model, args, seed=None, fig_path=None):
     ntests = utils.maybe_fix_ntests(ntests, num_test_envs)
 
     # Load the trained agent for testing
-    if isinstance(model, str):
+    if isinstance(model, (Path, str)):
         model_class = utils.get_model_class(args.model_class)
-        model = model_class.load(model)
+        model = model_class.load(str(model))
 
     start_time = time.perf_counter()
     # Test the trained model.

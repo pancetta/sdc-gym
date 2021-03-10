@@ -40,7 +40,7 @@ def _script_start_from_arg(arg):
 
 def get_prev_args(test_args):
     args_path = Path(test_args.path)
-    if not args_path.exists() or not args_path.lower().endswith('.json'):
+    if not args_path.exists() or not args_path.suffix.lower() == '.json':
         prev_script_start = _script_start_from_arg(test_args.path)
         args_path = Path(f'args_{prev_script_start}.json')
 
