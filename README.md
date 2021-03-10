@@ -18,3 +18,28 @@ python rl_playground.py --envname sdc-v1 --num_envs 8 \
        --model_class PPG --activation_fn ReLU \
        --collect_states True --reward_iteration_only False --norm_obs True
 ```
+
+## Another recommendation
+
+To accelerate learning, increase the batch size if possible. Here is
+an example for PPG:
+
+PPG has a default batch size of 64 (given as the keyword argument
+`batch_size`), so we could use a batch size of 512 like this:
+
+```shell
+python rl_playground.py --model_class PPG \
+       --model_kwargs '{"batch_size": 512}'
+```
+
+This will, however, most likely harm your training success due to a
+relation between batch size and learning rate. A good heuristic to
+help against this problem is scaling the learning rate proportionally
+to the batch size. The default learning rate we give is 25e-5, so
+scaling it to the increased batch size is `25e5 * 512 / 64 = 0.002`.
+Our new command for starting the script becomes the following:
+
+```shell
+python rl_playground.py --model_class PPG \
+       --model_kwargs '{"batch_size": 512}' --learning_rate 0.002
+```
