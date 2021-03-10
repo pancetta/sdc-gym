@@ -1,3 +1,4 @@
+import json
 from pathlib import Path
 
 import gym
@@ -46,6 +47,43 @@ def parse_bool(string):
     assert string == 'False' or string == 'True', \
         'please only use "False" or "True" as boolean arguments.'
     return string != 'False'
+
+
+def json_handle_constant(python_str, json_str):
+
+    def handle_constant(string, pos):
+        if (
+                string[pos] == python_str[0]
+                and string[pos:pos + len(python_str)] == python_str
+        ):
+            return string[:pos] + json_str + string[pos + len(python_str):]
+        return string
+
+    return handle_constant
+
+
+def json_fix_string(string, ex):
+    json_err_char_to_handler = {
+        'T': json_handle_constant('True', 'true'),
+        'F': json_handle_constant('False', 'false'),
+        'N': json_handle_constant('None', 'null'),
+    }
+
+    err_pos = ex.pos
+    err_char = string[err_pos]
+    if err_char not in json_err_char_to_handler:
+        raise ex
+
+    shape_string = json_err_char_to_handler[err_char]
+    string = shape_string(string, err_pos)
+
+
+def parse_dict(string):
+    while True:
+        try:
+            return json.loads(string)
+        except json.JSONDecodeError as ex:
+            string = json_fix_string(string, ex)
 
 
 def get_model_class(model_class_str):

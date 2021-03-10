@@ -1,5 +1,4 @@
 import argparse
-import json
 from pathlib import Path
 import subprocess
 
@@ -122,7 +121,7 @@ def parse_args():
     )
     parser.add_argument(
         '--model_kwargs',
-        type=json.loads,
+        type=utils.parse_dict,
         default={},
         help=(
             'Keyword arguments for model creation. '
@@ -141,7 +140,7 @@ def parse_args():
     )
     parser.add_argument(
         '--policy_kwargs',
-        type=json.loads,
+        type=utils.parse_dict,
         default={},
         help=(
             'Keyword arguments for policy creation. '
