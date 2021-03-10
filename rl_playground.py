@@ -4,6 +4,7 @@ from pathlib import Path
 import time
 
 import matplotlib.pyplot as plt
+import numpy as np
 
 import utils
 
@@ -60,14 +61,19 @@ def test_model(model, env, ntests, name):
         state = None
         obs = env.reset()
         done = [False for _ in range(num_envs)]
+        if env.envs[0].prec is not None:
+            action = np.empty(env.action_space.shape,
+                              dtype=env.action_space.dtype)
 
         while not all(done):
-            action, state = model.predict(
-                obs,
-                state=state,
-                mask=done,
-                deterministic=True,
-            )
+            # Do not predict an action when we would discard it anyway
+            if env.envs[0].prec is None:
+                action, state = model.predict(
+                    obs,
+                    state=state,
+                    mask=done,
+                    deterministic=True,
+                )
             obs, rewards, done, info = env.step(action)
 
         for (env_, info_) in zip(env.envs, info):
