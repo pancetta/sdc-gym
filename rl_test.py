@@ -48,7 +48,8 @@ def get_prev_args(test_args):
         args = json.load(f)
     args = argparse.Namespace(**args)
     if not hasattr(args, 'script_start'):
-        args.script_start = prev_script_path
+        args.script_start = prev_script_start
+    return args
 
 
 def model_fname_from_args(test_args, args):
