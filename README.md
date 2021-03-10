@@ -40,6 +40,15 @@ scaling it to the increased batch size is `25e5 * 512 / 64 = 0.002`.
 Our new command for starting the script becomes the following:
 
 ```shell
-python rl_playground.py --model_class PPG \
-       --model_kwargs '{"batch_size": 512}' --learning_rate 0.002
+python rl_playground.py --model_class PPG --learning_rate 0.002 \
+       --model_kwargs '{"batch_size": 512}'
+```
+
+For PPG, keep in mind that it also uses an auxiliary batch size
+(`aux_batch_size`)! Half of the normal batch size is a good starting
+value for this. The final command is:
+
+```shell
+python rl_playground.py --model_class PPG --learning_rate 0.002 \
+       --model_kwargs '{"batch_size": 512, "aux_batch_size": 256}'
 ```
