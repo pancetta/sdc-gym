@@ -11,7 +11,7 @@ PPO2_DEFAULT_NUM_MINIBATCHES = 4
 
 def setup(using_sb3, debugging_nans=False):
     global use_sb3, debug_nans, \
-        EvalCallback, \
+        CheckpointCallback, EvalCallback, \
         DummyVecEnv, VecCheckNan, VecNormalize, \
         stable_baselines, act_fns
 
@@ -19,7 +19,8 @@ def setup(using_sb3, debugging_nans=False):
     debug_nans = debugging_nans
 
     if use_sb3:
-        from stable_baselines3.common.callbacks import EvalCallback
+        from stable_baselines3.common.callbacks import CheckpointCallback, \
+            EvalCallback
         from stable_baselines3.common.vec_env import DummyVecEnv, \
             VecCheckNan, VecNormalize
         import stable_baselines3 as stable_baselines
@@ -28,7 +29,8 @@ def setup(using_sb3, debugging_nans=False):
             import torch
             torch.autograd.set_detect_anomaly(True)
     else:
-        from stable_baselines.common.callbacks import EvalCallback
+        from stable_baselines.common.callbacks import CheckpointCallback, \
+            EvalCallback
         from stable_baselines.common.vec_env import DummyVecEnv, \
             VecCheckNan, VecNormalize
         from stable_baselines.common import tf_layers as act_fns
@@ -274,6 +276,19 @@ def make_env(
     if debug_nans:
         env = VecCheckNan(env, raise_exception=True)
     return env
+
+
+def create_save_callback(args):
+    if args.save_freq <= 0:
+        return None
+
+    dirname = Path(f'sdc_model_{args.model_class.lower()}_'
+                   f'{args.policy_class.lower()}_{args.script_start}')
+    eval_callback = CheckpointCallback(
+        save_freq=args.save_freq,
+        save_path=str(dirname),
+    )
+    return eval_callback
 
 
 def create_eval_callback(args):

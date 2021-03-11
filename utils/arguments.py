@@ -212,6 +212,15 @@ def parse_args():
         ),
     )
     parser.add_argument(
+        '--save_freq',
+        type=int,
+        default=0,
+        help=(
+            'How often to save checkpoints of the model during training. '
+            'If this is 0, do not checkpoint.'
+        ),
+    )
+    parser.add_argument(
         '--eval_freq',
         type=int,
         default=0,

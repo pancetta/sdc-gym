@@ -196,6 +196,7 @@ def main():
     model = setup_model(args, env)
 
     callbacks = []
+    utils.append_callback(callbacks, utils.create_save_callback(args))
     utils.append_callback(callbacks, utils.create_eval_callback(args))
 
     start_time = time.perf_counter()
