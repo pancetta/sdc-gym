@@ -59,6 +59,32 @@ def _store_test_stats(path, stats):
     np.savez_compressed(path, **stats)
 
 
+def dry_run(model, env, nsteps):
+    num_envs = env.num_envs
+    # Amount of loops to run for vectorized environments
+    nsteps = nsteps // num_envs * num_envs
+
+    for i in range(nsteps):
+        state = None
+        obs = env.reset()
+        done = [False for _ in range(num_envs)]
+        if env.envs[0].prec is not None:
+            action = np.empty(env.action_space.shape,
+                              dtype=env.action_space.dtype)
+
+        while not all(done):
+            # Do not predict an action when we would discard it anyway
+            if env.envs[0].prec is None:
+                action, state = model.predict(
+                    obs,
+                    state=state,
+                    mask=done,
+                    deterministic=True,
+                )
+
+            obs, rewards, done, info = env.step(action)
+
+
 def test_model(model, env, ntests, name, stats_path=None):
     """Test the `model` in the Gym `env` `ntests` times.
     `name` is the name for the test run for logging purposes.
@@ -244,6 +270,8 @@ def main():
     callbacks = []
     utils.append_callback(callbacks, utils.create_save_callback(args))
     utils.append_callback(callbacks, utils.create_eval_callback(args))
+
+    dry_run(model, env, args.warmup_steps)
 
     start_time = time.perf_counter()
     # Train the model (need to put at least 100k steps to

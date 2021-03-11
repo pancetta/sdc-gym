@@ -258,6 +258,15 @@ def parse_args():
             'Used to set up the moving average for normalization.'
         ),
     )
+    parser.add_argument(
+        '--warmup_steps',
+        type=float,
+        default=0,
+        help=(
+            'How many steps to take in the environment before learning, '
+            'to initialize its moving average.'
+        ),
+    )
 
     parser.add_argument(
         '--use_sb3',
