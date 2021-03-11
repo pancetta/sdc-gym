@@ -259,20 +259,23 @@ def make_env(
         for i in range(num_envs)
     ])
     if include_norm:
-        # When training, set `norm_reward = True`, I hear...
-        if 'gamma' in args.model_kwargs:
-            env = VecNormalize(
-                env,
-                norm_obs=args.norm_obs,
-                norm_reward=norm_reward,
-                gamma=args.model_kwargs['gamma'],
-            )
+        if args.env_path is not None:
+            env = VecNormalize(str(Path(args.env_path)), env)
         else:
-            env = VecNormalize(
-                env,
-                norm_obs=args.norm_obs,
-                norm_reward=norm_reward,
-            )
+            # When training, set `norm_reward = True`, I hear...
+            if 'gamma' in args.model_kwargs:
+                env = VecNormalize(
+                    env,
+                    norm_obs=args.norm_obs,
+                    norm_reward=norm_reward,
+                    gamma=args.model_kwargs['gamma'],
+                )
+            else:
+                env = VecNormalize(
+                    env,
+                    norm_obs=args.norm_obs,
+                    norm_reward=norm_reward,
+                )
     if debug_nans:
         env = VecCheckNan(env, raise_exception=True)
     return env

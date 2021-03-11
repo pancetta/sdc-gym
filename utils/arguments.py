@@ -249,6 +249,15 @@ def parse_args():
             'model arguments. (`policy_kwargs` cannot be changed.)'
         ),
     )
+    parser.add_argument(
+        '--env_path',
+        type=str,
+        default=None,
+        help=(
+            'Environment checkpoint to load (a Pickle file). '
+            'Used to set up the moving average for normalization.'
+        ),
+    )
 
     parser.add_argument(
         '--use_sb3',
