@@ -132,6 +132,6 @@ dmypy.json
 *.pdf
 *.zip
 *.tfevents.*
-/args_*.json
+*.json
 *.npy
 *.npz
