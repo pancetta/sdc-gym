@@ -16,10 +16,6 @@ def setup_model(args, env):
 
     utils.check_num_envs(args, policy_class)
 
-    if args.model_path is not None:
-        model = model_class.load(str(Path(args.model_path)), env)
-        return model
-
     policy_kwargs = args.policy_kwargs
     if args.activation_fn is not None:
         policy_kwargs['activation_fn'] = utils.get_activation_fn(
@@ -46,7 +42,16 @@ def setup_model(args, env):
 
     utils.maybe_fix_nminibatches(model_kwargs, args, policy_class)
 
-    model = model_class(policy_class, env, **model_kwargs)
+    if args.model_path is None:
+        model = model_class(policy_class, env, **model_kwargs)
+        return model
+
+    if args.change_model:
+        model_kwargs.pop('policy_kwargs', None)
+        model = model_class.load(str(Path(args.model_path)), env,
+                                 **model_kwargs)
+    else:
+        model = model_class.load(str(Path(args.model_path)), env)
     return model
 
 

@@ -237,7 +237,16 @@ def parse_args():
         help=(
             'Model checkpoint to load (a ZIP file). '
             'Will reconstruct the model from the checkpoint, '
-            'ignoring model arguments.'
+            'ignoring model arguments (unless `--change_model True`).'
+        ),
+    )
+    parser.add_argument(
+        '--change_model',
+        type=utils.parse_bool,
+        default=False,
+        help=(
+            "Whether to overwrite a loaded model's parameters with the "
+            'model arguments. (`policy_kwargs` cannot be changed.)'
         ),
     )
 
