@@ -237,11 +237,11 @@ def parse_args():
         help=(
             'Model checkpoint to load (a ZIP file). '
             'Will reconstruct the model from the checkpoint, '
-            'ignoring model arguments (unless `--change_model True`).'
+            'ignoring model arguments (unless `--change_loaded_model True`).'
         ),
     )
     parser.add_argument(
-        '--change_model',
+        '--change_loaded_model',
         type=utils.parse_bool,
         default=False,
         help=(
