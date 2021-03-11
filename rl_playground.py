@@ -46,7 +46,7 @@ def setup_model(args, env):
         model = model_class(policy_class, env, **model_kwargs)
         return model
 
-    if args.change_model:
+    if args.change_loaded_model:
         model_kwargs.pop('policy_kwargs', None)
         model = model_class.load(str(Path(args.model_path)), env,
                                  **model_kwargs)
