@@ -231,6 +231,17 @@ def parse_args():
     )
 
     parser.add_argument(
+        '--model_path',
+        type=str,
+        default=None,
+        help=(
+            'Model checkpoint to load (a ZIP file). '
+            'Will reconstruct the model from the checkpoint, '
+            'ignoring model arguments.'
+        ),
+    )
+
+    parser.add_argument(
         '--use_sb3',
         type=utils.parse_bool,
         default=utils.has_sb3(),
