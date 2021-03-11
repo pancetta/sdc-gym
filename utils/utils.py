@@ -49,7 +49,7 @@ def parse_bool(string):
     return string != 'False'
 
 
-def json_handle_constant(python_str, json_str):
+def _json_handle_constant(python_str, json_str):
 
     def handle_constant(string, pos):
         if (
@@ -62,11 +62,11 @@ def json_handle_constant(python_str, json_str):
     return handle_constant
 
 
-def json_fix_string(string, ex):
+def _json_fix_string(string, ex):
     json_err_char_to_handler = {
-        'T': json_handle_constant('True', 'true'),
-        'F': json_handle_constant('False', 'false'),
-        'N': json_handle_constant('None', 'null'),
+        'T': _json_handle_constant('True', 'true'),
+        'F': _json_handle_constant('False', 'false'),
+        'N': _json_handle_constant('None', 'null'),
     }
 
     err_pos = ex.pos
@@ -83,7 +83,7 @@ def parse_dict(string):
         try:
             return json.loads(string)
         except json.JSONDecodeError as ex:
-            string = json_fix_string(string, ex)
+            string = _json_fix_string(string, ex)
 
 
 def get_model_class(model_class_str):
