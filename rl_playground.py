@@ -98,7 +98,7 @@ def test_model(model, env, ntests, name):
         mean_niter /= nsucc
     else:
         mean_niter = 666
-    print(f'{name}  -- Mean number of iterations and success rate: '
+    print(f'{name:<3} -- Mean number of iterations and success rate: '
           f'{mean_niter:4.2f}, {nsucc / ntests_total * 100} %')
     return results
 
