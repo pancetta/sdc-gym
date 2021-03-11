@@ -284,11 +284,11 @@ def create_save_callback(args):
 
     dirname = Path(f'sdc_model_{args.model_class.lower()}_'
                    f'{args.policy_class.lower()}_{args.script_start}')
-    eval_callback = CheckpointCallback(
+    callback = CheckpointCallback(
         save_freq=args.save_freq,
         save_path=str(dirname),
     )
-    return eval_callback
+    return callback
 
 
 def create_eval_callback(args):
@@ -310,14 +310,15 @@ def create_eval_callback(args):
 
     best_dirname = Path(f'best_sdc_model_{args.model_class.lower()}_'
                         f'{args.policy_class.lower()}_{args.script_start}')
-    eval_callback = EvalCallback(
+    callback = EvalCallback(
         eval_env,
         best_model_save_path=str(best_dirname),
         eval_freq=args.eval_freq,
+        n_eval_episodes=50,
         deterministic=True,
         render=False,
     )
-    return eval_callback
+    return callback
 
 
 def append_callback(callbacks, callback):
