@@ -255,9 +255,14 @@ def main():
     print('Number of episodes in each environment:',
           [env_.num_episodes for env_ in env.envs])
 
-    fname = Path(f'sdc_model_{args.model_class.lower()}_'
-                 f'{args.policy_class.lower()}_{script_start}.zip')
-    model.save(str(fname))
+    model_fname = Path(f'sdc_model_{args.model_class.lower()}_'
+                       f'{args.policy_class.lower()}_{script_start}.zip')
+    model.save(str(model_fname))
+
+    if isinstance(env, utils.VecNormalize):
+        env_fname = Path(f'sdc_env_{script_start}.pkl')
+        env.save(str(env_fname))
+
     # delete trained model to demonstrate loading, not really necessary
     # del model
 
