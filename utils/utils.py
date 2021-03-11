@@ -305,6 +305,12 @@ def create_eval_callback(args):
     return eval_callback
 
 
+def append_callback(callbacks, callback):
+    if callback is not None:
+        callbacks.append(callback)
+    return callbacks
+
+
 def check_num_envs(args, policy_class):
     """Raise an error if the number of environments will cause issues with
     the model.

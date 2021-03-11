@@ -195,12 +195,13 @@ def main():
     # Set up model
     model = setup_model(args, env)
 
-    eval_callback = utils.create_eval_callback(args)
+    callbacks = []
+    utils.append_callback(callbacks, utils.create_eval_callback(args))
 
     start_time = time.perf_counter()
     # Train the model (need to put at least 100k steps to
     # see something)
-    model.learn(total_timesteps=int(args.steps), callback=eval_callback)
+    model.learn(total_timesteps=int(args.steps), callback=callbacks)
     duration = time.perf_counter() - start_time
     print(f'Training took {duration} seconds.')
     # env.envs[0].plot_rewards()
