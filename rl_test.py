@@ -35,6 +35,14 @@ def parse_args():
             'Defaults to the number of tests for the loaded model.'
         ),
     )
+    parser.add_argument(
+        '--store_stats',
+        type=utils.parse_bool,
+        default=False,
+        help=(
+            'Whether to store statistics from the reinforcement learning test.'
+        ),
+    )
     return parser.parse_args()
 
 
@@ -109,10 +117,15 @@ def main():
     # ---------------- TESTING STARTS HERE ----------------
 
     fig_path = Path(f'test_results_{script_start}.pdf')
+    if test_args.store_stats:
+        stats_path = Path(f'test_stats_{script_start}.npz')
+    else:
+        stats_path = None
     if test_args.tests is not None:
         args.tests = test_args.tests
 
-    run_tests(fname, args, seed=eval_seed, fig_path=fig_path)
+    run_tests(fname, args, seed=eval_seed, fig_path=fig_path,
+              stats_path=stats_path)
 
 
 if __name__ == '__main__':
