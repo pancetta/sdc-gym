@@ -26,6 +26,15 @@ def parse_args():
         default=None,
         help='Model file to load. Has priority over `path`.',
     )
+    parser.add_argument(
+        '--tests',
+        type=float,
+        default=None,
+        help=(
+            'Number of test runs for each preconditioning method. '
+            'Defaults to the number of tests for the loaded model.'
+        ),
+    )
     return parser.parse_args()
 
 
@@ -100,6 +109,9 @@ def main():
     # ---------------- TESTING STARTS HERE ----------------
 
     fig_path = Path(f'test_results_{script_start}.pdf')
+    if test_args.tests is not None:
+        args.tests = test_args.tests
+
     run_tests(fname, args, seed=eval_seed, fig_path=fig_path)
 
 
