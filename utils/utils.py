@@ -376,3 +376,8 @@ def maybe_fix_nminibatches(model_kwargs, args, policy_class):
           'not a multiple of `PPO2.nminibatches`. '
           'Setting `nminibatches = num_envs`...')
     model_kwargs['nminibatches'] = args.num_envs
+
+
+def save_env(path, env):
+    if isinstance(env, VecNormalize):
+        env.save(str(path))

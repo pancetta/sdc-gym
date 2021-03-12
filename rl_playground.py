@@ -287,9 +287,8 @@ def main():
                        f'{args.policy_class.lower()}_{script_start}.zip')
     model.save(str(model_fname))
 
-    if isinstance(env, utils.VecNormalize):
-        env_fname = Path(f'sdc_env_{script_start}.pkl')
-        env.save(str(env_fname))
+    env_fname = Path(f'sdc_env_{script_start}.pkl')
+    utils.save_env(env_fname, env)
 
     # delete trained model to demonstrate loading, not really necessary
     # del model
