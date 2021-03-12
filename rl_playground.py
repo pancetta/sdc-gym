@@ -185,19 +185,17 @@ def run_tests(model, args, seed=None, fig_path=None, stats_path=None):
     `stats_path` is an optional path where to save statistics about the
     reinforcement learning test.
     """
-    policy_class = utils.get_policy_class(args.policy_class, args.model_class)
-
-    # Not vectorizing is faster for testing for some reason.
-    num_test_envs = args.num_envs \
-        if not args.use_sb3 and policy_class.recurrent else 1
-
-    ntests = int(args.tests)
-    ntests = utils.maybe_fix_ntests(ntests, num_test_envs)
-
     # Load the trained agent for testing
     if isinstance(model, (Path, str)):
         model_class = utils.get_model_class(args.model_class)
         model = model_class.load(str(model))
+
+    # Not vectorizing is faster for testing for some reason.
+    num_test_envs = args.num_envs \
+        if not args.use_sb3 and model.policy.recurrent else 1
+
+    ntests = int(args.tests)
+    ntests = utils.maybe_fix_ntests(ntests, num_test_envs)
 
     start_time = time.perf_counter()
     # Test the trained model.
