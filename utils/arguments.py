@@ -264,7 +264,8 @@ def parse_args():
         default=0,
         help=(
             'How many steps to take in the environment before learning, '
-            'to initialize its moving average.'
+            'to initialize its moving average. '
+            'The environment is re-seeded afterwards.'
         ),
     )
 

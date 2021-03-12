@@ -272,6 +272,7 @@ def main():
     utils.append_callback(callbacks, utils.create_eval_callback(args))
 
     dry_run(model, env, int(args.warmup_steps))
+    env.seed(args.seed)
 
     start_time = time.perf_counter()
     # Train the model (need to put at least 100k steps to
