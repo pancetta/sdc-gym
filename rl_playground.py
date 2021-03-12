@@ -73,8 +73,8 @@ def dry_run(model, env, nsteps):
             if env.envs[0].prec is None:
                 action, state = model.predict(
                     obs,
-                    state=state,
-                    mask=done,
+                    state=state if model.policy.recurrent else None,,
+                    mask=done if model.policy.recurrent else None,
                     deterministic=True,
                 )
 
