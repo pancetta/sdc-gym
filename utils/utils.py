@@ -259,7 +259,7 @@ def make_env(
         for i in range(num_envs)
     ])
     if include_norm:
-        if args.env_path is not None:
+        if hasattr(args, 'env_path') and args.env_path is not None:
             env = VecNormalize(str(Path(args.env_path)), env)
         else:
             # When training, set `norm_reward = True`, I hear...
