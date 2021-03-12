@@ -260,7 +260,7 @@ def make_env(
     ])
     if include_norm:
         if hasattr(args, 'env_path') and args.env_path is not None:
-            env = VecNormalize(str(Path(args.env_path)), env)
+            env = VecNormalize.load(str(Path(args.env_path)), env)
         else:
             # When training, set `norm_reward = True`, I hear...
             if 'gamma' in args.model_kwargs:
