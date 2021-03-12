@@ -55,10 +55,6 @@ def setup_model(args, env):
     return model
 
 
-def _store_test_stats(path, stats):
-    np.savez_compressed(path, **stats)
-
-
 def dry_run(model, env, nsteps):
     num_envs = env.num_envs
     # Amount of loops to run for vectorized environments
@@ -83,6 +79,10 @@ def dry_run(model, env, nsteps):
                 )
 
             obs, rewards, done, info = env.step(action)
+
+
+def _store_test_stats(path, stats):
+    np.savez_compressed(path, **stats)
 
 
 def test_model(model, env, ntests, name, stats_path=None):
