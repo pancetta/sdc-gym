@@ -37,8 +37,9 @@ executing fewer training steps, as we process much more data (and thus
 more environmental timesteps) in each training step. A good heuristic
 to help against this problem is scaling the learning rate
 proportionally to the batch size. The default learning rate we give is
-25e-5, so scaling it to the increased batch size is `25e5 * 512 / 64 =
-0.002`. Our new command for starting the script becomes the following:
+25e-5, so scaling it to the increased batch size is `25e-5 * 512 / 64
+= 0.002`. Our new command for starting the script becomes the
+following:
 
 ```shell
 python rl_playground.py --model_class PPG --learning_rate 0.002 \
