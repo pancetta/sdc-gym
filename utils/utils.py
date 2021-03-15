@@ -12,6 +12,7 @@ PPO2_DEFAULT_NUM_MINIBATCHES = 4
 def setup(using_sb3, debugging_nans=False):
     global use_sb3, debug_nans, \
         CheckpointCallback, EvalCallback, \
+        LinearSchedule, \
         DummyVecEnv, VecCheckNan, VecNormalize, \
         stable_baselines, act_fns
 
@@ -21,6 +22,8 @@ def setup(using_sb3, debugging_nans=False):
     if use_sb3:
         from stable_baselines3.common.callbacks import CheckpointCallback, \
             EvalCallback
+        from stable_baselines3.common.utils import \
+            get_linear_fn as LinearSchedule
         from stable_baselines3.common.vec_env import DummyVecEnv, \
             VecCheckNan, VecNormalize
         import stable_baselines3 as stable_baselines
@@ -31,6 +34,7 @@ def setup(using_sb3, debugging_nans=False):
     else:
         from stable_baselines.common.callbacks import CheckpointCallback, \
             EvalCallback
+        from stable_baselines.common.schedules import LinearSchedule
         from stable_baselines.common.vec_env import DummyVecEnv, \
             VecCheckNan, VecNormalize
         from stable_baselines.common import tf_layers as act_fns
@@ -177,6 +181,20 @@ def compute_learning_rate(args):
     learning_rate = args.learning_rate
     if args.rescale_lr:
         learning_rate *= args.num_envs
+
+    if not hasattr(args, 'end_lr') or args.end_lr is None:
+        return learning_rate
+
+    end_lr = args.end_lr
+    if args.rescale_lr:
+        end_lr *= args.num_envs
+
+    if use_sb3:
+        learning_rate = LinearSchedule(learning_rate, end_lr, args.end_lr_frac)
+    else:
+        end_lr_frac_steps = args.steps * args.end_lr_frac
+        learning_rate = LinearSchedule(
+            end_lr_frac_steps, end_lr, learning_rate)
     return learning_rate
 
 
