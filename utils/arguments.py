@@ -21,7 +21,7 @@ def parse_args():
         help=(
             '"Difficulty" of the problem '
             '(proportionally relates to nth-order differential equation)'
-            '(choose M = 3 or M = 5 for comparing MIN-preconditioner)'
+            '(choose M = 3, 4, 5, 7 for comparing MIN-preconditioner)'
         ),
     )
     parser.add_argument(
@@ -91,7 +91,7 @@ def parse_args():
         '--learning_rate',
         type=float,
         # default for PPO2 in stable-baselines
-        default=25E-05,
+        default=0.002,
         help='Learning rate/step size of the model.',
     )
     parser.add_argument(
@@ -116,13 +116,13 @@ def parse_args():
     parser.add_argument(
         '--model_class',
         type=str,
-        default='PPO2',
+        default='PPG',
         help='Class of model to instantiate.',
     )
     parser.add_argument(
         '--model_kwargs',
         type=utils.parse_dict,
-        default={},
+        default={"batch_size": 512, "aux_batch_size": 256},
         help=(
             'Keyword arguments for model creation. '
             'See the documentation for details. '

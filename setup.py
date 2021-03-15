@@ -9,7 +9,7 @@ setup(
         'numpy',
         'scipy',
         'matplotlib',
-        'stable_baselines',
+        'stable_baselines3',
         'pyzt',
     ],
 )
