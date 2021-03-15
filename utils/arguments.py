@@ -99,7 +99,7 @@ def parse_args():
         type=utils.parse_bool,
         default=True,
         help=(
-            'Whether to rescale the learning rate by the number'
+            'Whether to rescale the learning rate by the number '
             'of environments.'
         ),
     )
