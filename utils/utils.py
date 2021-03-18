@@ -82,6 +82,7 @@ def _json_fix_string(string, ex):
 
     shape_string = json_err_char_to_handler[err_char]
     string = shape_string(string, err_pos)
+    return string
 
 
 def parse_dict(string):
