@@ -267,6 +267,10 @@ def make_env(
         args_kwargs[arg] = kwargs.pop(arg, getattr(args, arg))
     all_kwargs = {**kwargs, **args_kwargs}
 
+    # SAC does not support float64
+    if args.model_class == 'SAC':
+        all_kwargs['use_doubles'] = False
+
     seed = all_kwargs.pop('seed', args.seed)
 
     env = DummyVecEnv([
