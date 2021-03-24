@@ -94,18 +94,19 @@ def test_model(model, env, ntests, name, stats_path=None):
     mean_niter = 0
     nsucc = 0
     results = []
-    stats = {
-        key: []
-        for key in [
-                'obs',
-                'action',
-                'reward',
-                'niter',
-                'lam',
-                'residual',
-                'terminal_observation',
-        ]
-    }
+    if stats_path is not None:
+        stats = {
+            key: []
+            for key in [
+                    'obs',
+                    'action',
+                    'reward',
+                    'niter',
+                    'lam',
+                    'residual',
+                    'terminal_observation',
+            ]
+        }
 
     num_envs = env.num_envs
     # Amount of test that will be ran in total
