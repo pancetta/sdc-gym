@@ -14,7 +14,7 @@ def setup(using_sb3, debugging_nans=False):
         CheckpointCallback, EvalCallback, \
         LinearSchedule, \
         DummyVecEnv, VecCheckNan, VecNormalize, \
-        stable_baselines, act_fns
+        stable_baselines, act_fns, my_act_fns
 
     use_sb3 = using_sb3
     debug_nans = debugging_nans
@@ -28,6 +28,8 @@ def setup(using_sb3, debugging_nans=False):
             VecCheckNan, VecNormalize
         import stable_baselines3 as stable_baselines
         import torch.nn as act_fns
+
+        import utils.sb3_activations as my_act_fns
         if debug_nans:
             import torch
             torch.autograd.set_detect_anomaly(True)
@@ -39,6 +41,7 @@ def setup(using_sb3, debugging_nans=False):
             VecCheckNan, VecNormalize
         import stable_baselines
         import tensorflow.nn as act_fns
+        my_act_fns = act_fns
 
 
 def has_sb3():
@@ -168,13 +171,17 @@ def get_activation_fn(activation_fn_str):
     try:
         activation_fn = getattr(act_fns, activation_fn_str)
     except AttributeError:
-        err_string = (f'could not find activation function '
-                      f"'{activation_fn_str}' in module ")
-        if use_sb3:
-            err_string = f'{err_string}`torch.nn`'
-        else:
-            err_string = f'{err_string}`tensorflow.nn`'
-        raise AttributeError(err_string)
+        try:
+            activation_fn = getattr(my_act_fns, activation_fn_str)
+        except KeyError:
+            err_string = (f'could not find activation function '
+                          f"'{activation_fn_str}' in module ")
+            if use_sb3:
+                err_string = (f'{err_string}`torch.nn` or in '
+                              f'module `sb3_activations`')
+            else:
+                err_string = f'{err_string}`tensorflow.nn`'
+            raise AttributeError(f'{err_string}')
     return activation_fn
 
 
