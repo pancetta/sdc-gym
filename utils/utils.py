@@ -37,8 +37,8 @@ def setup(using_sb3, debugging_nans=False):
         from stable_baselines.common.schedules import LinearSchedule
         from stable_baselines.common.vec_env import DummyVecEnv, \
             VecCheckNan, VecNormalize
-        from stable_baselines.common import tf_layers as act_fns
         import stable_baselines
+        import tensorflow.nn as act_fns
 
 
 def has_sb3():
@@ -173,7 +173,7 @@ def get_activation_fn(activation_fn_str):
         if use_sb3:
             err_string = f'{err_string}`torch.nn`'
         else:
-            err_string = f'{err_string}`stable_baselines.common.tf_layers`'
+            err_string = f'{err_string}`tensorflow.nn`'
         raise AttributeError(err_string)
     return activation_fn
 
