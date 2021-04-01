@@ -99,6 +99,9 @@ class SDC_Full_Env(gym.Env):
         self.np_random, seed = seeding.np_random(seed)
         return seed
 
+    def set_num_episodes(self, num_episodes):
+        self.num_episodes = num_episodes
+
     def _get_prec(self, scaled_action, M):
         """Return a preconditioner based on the `scaled_action`.
         `M` is the problem size.

@@ -68,6 +68,16 @@ def parse_args():
             'By default, do not resize.'
         ),
     )
+    parser.add_argument(
+        '--start_episodes',
+        type=int,
+        default=0,
+        help=(
+            'Number of episodes to set in each environment at the '
+            'start (after warmup). '
+            'Useful for `--lambda_real_interpolation_interval`.'
+        ),
+    )
 
     parser.add_argument(
         '--envname',

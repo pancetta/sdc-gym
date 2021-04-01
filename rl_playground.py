@@ -275,6 +275,8 @@ def main():
 
     dry_run(model, env, int(args.warmup_steps))
     env.seed(args.seed)
+    for env_ in env.envs:
+        env_.set_num_episodes(args.start_episodes)
 
     start_time = time.perf_counter()
     # Train the model (need to put at least 100k steps to
