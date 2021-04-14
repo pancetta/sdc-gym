@@ -2,9 +2,6 @@ import argparse
 import datetime
 import json
 from pathlib import Path
-import time
-
-import matplotlib.pyplot as plt
 
 from rl_playground import run_tests
 import utils

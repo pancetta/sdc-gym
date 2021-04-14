@@ -68,6 +68,16 @@ def parse_args():
             'By default, do not resize.'
         ),
     )
+    parser.add_argument(
+        '--start_episodes',
+        type=int,
+        default=0,
+        help=(
+            'Number of episodes to set in each environment at the '
+            'start (after warmup). '
+            'Useful for `--lambda_real_interpolation_interval`.'
+        ),
+    )
 
     parser.add_argument(
         '--envname',
@@ -99,8 +109,29 @@ def parse_args():
         type=utils.parse_bool,
         default=True,
         help=(
-            'Whether to rescale the learning rate by the number'
+            'Whether to rescale the learning rate by the number '
             'of environments.'
+        ),
+    )
+    parser.add_argument(
+        '--end_lr',
+        type=float,
+        default=None,
+        help=(
+            'Whether to linearly interpolate the learning rate by the '
+            'amount of training progress remaining. '
+            '`--end_lr_frac` controls at which fractional amount of '
+            'completed progress this is reached. '
+            'By default, do not use learning rate scheduling.'
+        ),
+    )
+    parser.add_argument(
+        '--end_lr_frac',
+        type=float,
+        default=1.0,
+        help=(
+            'Controls at which fractional amount of completed progress '
+            '`--end_lr` is reached. No effect if `--end_lr None`.'
         ),
     )
     parser.add_argument(

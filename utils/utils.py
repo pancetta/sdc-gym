@@ -12,8 +12,9 @@ PPO2_DEFAULT_NUM_MINIBATCHES = 4
 def setup(using_sb3, debugging_nans=False):
     global use_sb3, debug_nans, \
         CheckpointCallback, EvalCallback, \
+        LinearSchedule, \
         DummyVecEnv, VecCheckNan, VecNormalize, \
-        stable_baselines, act_fns
+        stable_baselines, act_fns, my_act_fns
 
     use_sb3 = using_sb3
     debug_nans = debugging_nans
@@ -21,20 +22,26 @@ def setup(using_sb3, debugging_nans=False):
     if use_sb3:
         from stable_baselines3.common.callbacks import CheckpointCallback, \
             EvalCallback
+        from stable_baselines3.common.utils import \
+            get_linear_fn as LinearSchedule
         from stable_baselines3.common.vec_env import DummyVecEnv, \
             VecCheckNan, VecNormalize
         import stable_baselines3 as stable_baselines
         import torch.nn as act_fns
+
+        import utils.sb3_activations as my_act_fns
         if debug_nans:
             import torch
             torch.autograd.set_detect_anomaly(True)
     else:
         from stable_baselines.common.callbacks import CheckpointCallback, \
             EvalCallback
+        from stable_baselines.common.schedules import LinearSchedule
         from stable_baselines.common.vec_env import DummyVecEnv, \
             VecCheckNan, VecNormalize
-        from stable_baselines.common import tf_layers as act_fns
         import stable_baselines
+        import tensorflow.nn as act_fns
+        my_act_fns = act_fns
 
 
 def has_sb3():
@@ -78,6 +85,7 @@ def _json_fix_string(string, ex):
 
     shape_string = json_err_char_to_handler[err_char]
     string = shape_string(string, err_pos)
+    return string
 
 
 def parse_dict(string):
@@ -163,13 +171,17 @@ def get_activation_fn(activation_fn_str):
     try:
         activation_fn = getattr(act_fns, activation_fn_str)
     except AttributeError:
-        err_string = (f'could not find activation function '
-                      f"'{activation_fn_str}' in module ")
-        if use_sb3:
-            err_string = f'{err_string}`torch.nn`'
-        else:
-            err_string = f'{err_string}`stable_baselines.common.tf_layers`'
-        raise AttributeError(err_string)
+        try:
+            activation_fn = getattr(my_act_fns, activation_fn_str)
+        except KeyError:
+            err_string = (f'could not find activation function '
+                          f"'{activation_fn_str}' in module ")
+            if use_sb3:
+                err_string = (f'{err_string}`torch.nn` or in '
+                              f'module `sb3_activations`')
+            else:
+                err_string = f'{err_string}`tensorflow.nn`'
+            raise AttributeError(f'{err_string}')
     return activation_fn
 
 
@@ -177,6 +189,20 @@ def compute_learning_rate(args):
     learning_rate = args.learning_rate
     if args.rescale_lr:
         learning_rate *= args.num_envs
+
+    if not hasattr(args, 'end_lr') or args.end_lr is None:
+        return learning_rate
+
+    end_lr = args.end_lr
+    if args.rescale_lr:
+        end_lr *= args.num_envs
+
+    if use_sb3:
+        learning_rate = LinearSchedule(learning_rate, end_lr, args.end_lr_frac)
+    else:
+        end_lr_frac_steps = args.steps * args.end_lr_frac
+        learning_rate = LinearSchedule(
+            end_lr_frac_steps, end_lr, learning_rate)
     return learning_rate
 
 
@@ -247,6 +273,10 @@ def make_env(
     ]:
         args_kwargs[arg] = kwargs.pop(arg, getattr(args, arg))
     all_kwargs = {**kwargs, **args_kwargs}
+
+    # SAC does not support float64
+    if args.model_class == 'SAC':
+        all_kwargs['use_doubles'] = False
 
     seed = all_kwargs.pop('seed', args.seed)
 

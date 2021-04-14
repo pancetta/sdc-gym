@@ -94,18 +94,19 @@ def test_model(model, env, ntests, name, stats_path=None):
     mean_niter = 0
     nsucc = 0
     results = []
-    stats = {
-        key: []
-        for key in [
-                'obs',
-                'action',
-                'reward',
-                'niter',
-                'lam',
-                'residual',
-                'terminal_observation',
-        ]
-    }
+    if stats_path is not None:
+        stats = {
+            key: []
+            for key in [
+                    'obs',
+                    'action',
+                    'reward',
+                    'niter',
+                    'lam',
+                    'residual',
+                    'terminal_observation',
+            ]
+        }
 
     num_envs = env.num_envs
     # Amount of test that will be ran in total
@@ -199,7 +200,8 @@ def run_tests(model, args, seed=None, fig_path=None, stats_path=None):
 
     start_time = time.perf_counter()
     # Test the trained model.
-    env = utils.make_env(args, num_envs=num_test_envs, seed=seed)
+    env = utils.make_env(args, num_envs=num_test_envs, seed=seed,
+                         lambda_real_interpolation_interval=None)
     results_RL = test_model(
         model, env, ntests, 'RL', stats_path=stats_path)
 
@@ -211,6 +213,7 @@ def run_tests(model, args, seed=None, fig_path=None, stats_path=None):
         num_envs=num_test_envs,
         prec='LU',
         seed=seed,
+        lambda_real_interpolation_interval=None,
     )
     results_LU = test_model(model, env, ntests, 'LU')
 
@@ -223,6 +226,7 @@ def run_tests(model, args, seed=None, fig_path=None, stats_path=None):
         num_envs=num_test_envs,
         prec='min',
         seed=seed,
+        lambda_real_interpolation_interval=None,
     )
     results_min = test_model(model, env, ntests, 'MIN')
     duration = time.perf_counter() - start_time
@@ -271,6 +275,8 @@ def main():
 
     dry_run(model, env, int(args.warmup_steps))
     env.seed(args.seed)
+    for env_ in env.envs:
+        env_.set_num_episodes(args.start_episodes)
 
     start_time = time.perf_counter()
     # Train the model (need to put at least 100k steps to

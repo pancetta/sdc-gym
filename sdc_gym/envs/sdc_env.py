@@ -38,6 +38,7 @@ class SDC_Full_Env(gym.Env):
             step_penalty=0.1,
             reward_iteration_only=True,
             collect_states=False,
+            use_doubles=True,
     ):
 
         self.np_random = None
@@ -86,7 +87,7 @@ class SDC_Full_Env(gym.Env):
             low=-1.0,
             high=1.0,
             shape=(M,),
-            dtype=np.float64,
+            dtype=np.float64 if use_doubles else np.float32,
         )
 
         self.seed(seed)
@@ -97,6 +98,9 @@ class SDC_Full_Env(gym.Env):
     def seed(self, seed=None):
         self.np_random, seed = seeding.np_random(seed)
         return seed
+
+    def set_num_episodes(self, num_episodes):
+        self.num_episodes = num_episodes
 
     def _get_prec(self, scaled_action, M):
         """Return a preconditioner based on the `scaled_action`.
