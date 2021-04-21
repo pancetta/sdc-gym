@@ -133,7 +133,7 @@ def main():
     steps_num_digits = len(str(args.steps))
 
     for (step, (lams, min_diags)) in enumerate(dataloader):
-        lams = lams.to(device)
+        lams = lams.float().to(device)
         min_diags = min_diags.to(device)
 
         diags = model(lams)
