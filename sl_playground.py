@@ -379,8 +379,9 @@ def main():
         if step >= steps:
             break
 
-    cp_path = Path(f'sl_model_{script_start}.pt')
-    save_model(cp_path, model, opt)
+    if steps > 0:
+        cp_path = Path(f'sl_model_{script_start}.pt')
+        save_model(cp_path, model, opt)
     fig_path = Path(f'sl_results_{script_start}.pdf')
     run_tests(model, device, args, seed=eval_seed, fig_path=fig_path)
 
