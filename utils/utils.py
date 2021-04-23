@@ -280,12 +280,15 @@ def make_env(
 
     seed = all_kwargs.pop('seed', args.seed)
 
-    env = DummyVecEnv([
-        lambda: gym.make(
+    def gym_make(i):
+        return lambda: gym.make(
             args.envname,
             seed=seed + i if seed is not None else None,
             **all_kwargs,
         )
+
+    env = DummyVecEnv([
+        gym_make(i)
         for i in range(num_envs)
     ])
     if include_norm:
