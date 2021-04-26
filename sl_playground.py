@@ -209,11 +209,13 @@ def test_model(model, device, env, ntests, name, stats_path=None):
     with th.no_grad():
         for i in range(ntests):
             env.reset()
-            obs = th.tensor([env_.lam for env_ in env.envs]).float().to(device)
+            obs = th.tensor([env_.lam for env_ in env.envs]
+                            ).float().unsqueeze(0).to(device)
             done = [False for _ in range(num_envs)]
             if env.envs[0].prec is not None:
-                action = np.empty(env.action_space.shape,
-                                  dtype=env.action_space.dtype)
+                action = [np.empty(env.action_space.shape,
+                                   dtype=env.action_space.dtype)
+                          for _ in range(num_envs)]
 
             while not all(done):
                 if stats_path is not None:
@@ -222,11 +224,11 @@ def test_model(model, device, env, ntests, name, stats_path=None):
                 # Do not predict an action when we would discard it anyway
                 if env.envs[0].prec is None:
                     action = model(obs)
-                    action = action.cpu()
+                    action = [action.cpu().numpy()]
 
                 _, rewards, done, info = env.step(action)
-                obs = th.tensor([env_.lam
-                                 for env_ in env.envs]).float().to(device)
+                obs = th.tensor([env_.lam for env_ in env.envs]
+                                ).float().unsqueeze(0).to(device)
 
                 if stats_path is not None:
                     stats['action'].append(action)
