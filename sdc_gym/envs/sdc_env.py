@@ -39,6 +39,7 @@ class SDC_Full_Env(gym.Env):
             reward_iteration_only=True,
             collect_states=False,
             use_doubles=True,
+            do_scale=True,
     ):
 
         self.np_random = None
@@ -66,6 +67,7 @@ class SDC_Full_Env(gym.Env):
         self.step_penalty = step_penalty
         self.reward_iteration_only = reward_iteration_only
         self.collect_states = collect_states
+        self.do_scale = do_scale
 
         self.num_episodes = 0
         # self.rewards = []
@@ -163,7 +165,10 @@ class SDC_Full_Env(gym.Env):
 
         # I read somewhere that the actions should be scaled to [-1,1],
         # scale it back to [0,1] here...
-        scaled_action = np.interp(action, (-1, 1), (0, 1))
+        if self.do_scale:
+            scaled_action = np.interp(action, (-1, 1), (0, 1))
+        else:
+            scaled_action = action
 
         # Get Q_delta, based on self.prec (and/or scaled_action)
         Qdmat = self._get_prec(scaled_action=scaled_action, M=u.size)
@@ -342,7 +347,10 @@ class SDC_Step_Env(SDC_Full_Env):
 
         # I read somewhere that the actions should be scaled to [-1,1],
         # scale it back to [0,1] here...
-        scaled_action = np.interp(action, (-1, 1), (0, 1))
+        if self.do_scale:
+            scaled_action = np.interp(action, (-1, 1), (0, 1))
+        else:
+            scaled_action = action
 
         # Get Q_delta, based on self.prec (and/or scaled_action)
         Qdmat = self._get_prec(scaled_action=scaled_action, M=u.size)
