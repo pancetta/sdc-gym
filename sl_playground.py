@@ -367,6 +367,7 @@ def main():
     steps = int(args.steps)
     steps_num_digits = len(str(steps))
 
+    last_losses = th.zeros(100)
     for (step, (lams, min_diags)) in enumerate(dataloader):
         lams = lams.float().to(device)
         min_diags = min_diags.to(device)
@@ -378,9 +379,10 @@ def main():
         loss.backward()
         opt.step()
 
+        last_losses[step % 100] = loss.item()
         if step % 100 == 0:
             print(f'[{step:>{steps_num_digits}d}/{steps}] '
-                  f'loss: {loss.item():.5f}')
+                  f'mean loss: {th.mean(last_losses[:step + 1]).item():.5f}')
 
         if step >= steps:
             break
