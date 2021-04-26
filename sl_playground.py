@@ -168,11 +168,12 @@ def load_model(path, model, opt, device):
     model.to(device)
     if opt is not None:
         opt.load_state_dict(cp['opt_state_dict'])
-    return model, opt
+    return model, opt, cp.get('steps', 0)
 
 
-def save_model(path, model, opt):
+def save_model(path, model, opt, steps):
     th.save({
+        'steps': steps,
         'model_state_dict': model.state_dict(),
         'opt_state_dict': opt.state_dict(),
     }, path)
@@ -276,7 +277,7 @@ def run_tests(model, device, args, seed=None, fig_path=None, stats_path=None):
     if isinstance(model, (Path, str)):
         path = model
         model = PreconditionerPredictor(args.M).to(device)
-        model, _ = load_model(path, model, None, device)
+        model, _, _ = load_model(path, model, None, device)
 
     num_test_envs = 1
     ntests = int(args.tests)
@@ -358,7 +359,7 @@ def main():
     opt = th.optim.Adam(model.parameters(), lr=args.learning_rate)
 
     if args.model_path is not None:
-        model, opt = load_model(args.model_path, model, opt, device)
+        model, opt, old_steps = load_model(args.model_path, model, opt, device)
     model.train()
     steps = int(args.steps)
     steps_num_digits = len(str(steps))
@@ -383,7 +384,7 @@ def main():
 
     if steps > 0:
         cp_path = Path(f'sl_model_{script_start}.pt')
-        save_model(cp_path, model, opt)
+        save_model(cp_path, model, opt, steps + old_steps)
     fig_path = Path(f'sl_results_{script_start}.pdf')
     run_tests(model, device, args, seed=eval_seed, fig_path=fig_path)
 
