@@ -286,7 +286,8 @@ def run_tests(model, device, args, seed=None, fig_path=None, stats_path=None):
     start_time = time.perf_counter()
     # Test the trained model.
     env = utils.make_env(args, num_envs=num_test_envs, seed=seed,
-                         lambda_real_interpolation_interval=None)
+                         lambda_real_interpolation_interval=None,
+                         do_scale=False)
     results_RL = test_model(
         model, device, env, ntests, 'RL', stats_path=stats_path)
 
@@ -299,6 +300,7 @@ def run_tests(model, device, args, seed=None, fig_path=None, stats_path=None):
         prec='LU',
         seed=seed,
         lambda_real_interpolation_interval=None,
+        do_scale=False,
     )
     results_LU = test_model(model, device, env, ntests, 'LU')
 
@@ -312,6 +314,7 @@ def run_tests(model, device, args, seed=None, fig_path=None, stats_path=None):
         prec='min',
         seed=seed,
         lambda_real_interpolation_interval=None,
+        do_scale=False,
     )
     results_min = test_model(model, device, env, ntests, 'MIN')
     duration = time.perf_counter() - start_time
