@@ -65,8 +65,9 @@ def dry_run(model, env, nsteps):
         obs = env.reset()
         done = [False for _ in range(num_envs)]
         if env.envs[0].prec is not None:
-            action = np.empty(env.action_space.shape,
-                              dtype=env.action_space.dtype)
+            action = [np.empty(env.action_space.shape,
+                               dtype=env.action_space.dtype)
+                      for _ in range(num_envs)]
 
         while not all(done):
             # Do not predict an action when we would discard it anyway
