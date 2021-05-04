@@ -107,6 +107,12 @@ class SDC_Full_Env(gym.Env):
     def set_num_episodes(self, num_episodes):
         self.num_episodes = num_episodes
 
+    def _scale_action(self, action):
+        # I read somewhere that the actions should be scaled to [-1,1],
+        # scale it back to [0,1] here...
+        scaled_action = np.interp(action, (-1, 1), (0, 1))
+        return scaled_action
+
     def _get_prec(self, scaled_action):
         """Return a preconditioner based on the `scaled_action`."""
         # Decide which preconditioner to use
@@ -160,25 +166,29 @@ class SDC_Full_Env(gym.Env):
             raise NotImplementedError()
         return Qdmat
 
-    def step(self, action):
-
-        u, old_residual = self.state
-
-        # I read somewhere that the actions should be scaled to [-1,1],
-        # scale it back to [0,1] here...
-        if self.do_scale:
-            scaled_action = np.interp(action, (-1, 1), (0, 1))
-        else:
-            scaled_action = action
-
+    def _compute_pinv(self, scaled_action):
         # Get Q_delta, based on self.prec (and/or scaled_action)
         Qdmat = self._get_prec(scaled_action=scaled_action)
 
-        # Precompute the inverse of P
+        # Compute the inverse of P
         Pinv = np.linalg.inv(
             np.eye(self.M) - self.lam * self.dt * Qdmat,
         )
-        norm_res_old = np.linalg.norm(old_residual, np.inf)
+        return Pinv
+
+    def _compute_residual(self, u):
+        return self.u0 - self.C @ u
+
+    def _inf_norm(self, v):
+        return np.linalg.norm(v, np.inf)
+
+    def step(self, action):
+        u, old_residual = self.state
+
+        scaled_action = self._scale_action(action)
+
+        Pinv = self._compute_pinv(scaled_action)
+        norm_res_old = self._inf_norm(old_residual)
 
         done = False
         err = False
@@ -189,10 +199,10 @@ class SDC_Full_Env(gym.Env):
 
             # This is the iteration (yes, there is a typo in the slides,
             # this one is correct!)
-            u += Pinv @ (self.u0 - self.C @ u)
+            u += Pinv @ self._compute_residual(u)
             # Compute the residual and its norm
-            residual = self.u0 - self.C @ u
-            norm_res = np.linalg.norm(residual, np.inf)
+            residual = self._compute_residual(u)
+            norm_res = self._inf_norm(residual)
             # stop if something goes wrong
             err = np.isnan(norm_res) or np.isinf(norm_res)
             # so far this seems to be the best setup:
@@ -232,8 +242,14 @@ class SDC_Full_Env(gym.Env):
         else:
             return (self.state, reward, done, info)
 
-    def reset(self):
+    def _reset_vars(self):
         self.num_episodes += 1
+        self.niter = 0
+
+        # self.rewards.append(self.episode_rewards)
+        # self.episode_rewards = []
+
+    def _generate_lambda(self):
         # Draw a lambda (here: negative real for starters)
         # The number of episodes is always smaller than the number of
         # time steps, keep that in mind for the interpolation
@@ -253,15 +269,25 @@ class SDC_Full_Env(gym.Env):
                 high=self.lambda_imag_interval[1])
         )
 
+    def _compute_system_matrix(self):
         # Compute the system matrix
         self.C = np.eye(self.M) - self.lam * self.dt * self.Q
 
+    def _compute_initial_state(self):
+        self._generate_lambda()
+        self._compute_system_matrix()
+
         # Initial guess u^0 and initial residual for the state
         u = np.ones(self.M, dtype=np.complex128)
-        residual = self.u0 - self.C @ u
+        residual = self._compute_residual(u)
         self.initial_residual = residual
+        return (u, residual)
 
+    def reset(self):
+        self._reset_vars()
+        (u, residual) = self._compute_initial_state()
         self.state = (u, residual)
+
         if self.collect_states:
             # Try if this works instead of the line below it.
             # I didn't use it for safety, but it's a bit faster.
@@ -269,10 +295,6 @@ class SDC_Full_Env(gym.Env):
             self.old_states = np.zeros((self.M * 2, self.max_iters),
                                        dtype=np.complex128)
             self.old_states[:, 0] = np.concatenate((u, residual))
-
-        # self.rewards.append(self.episode_rewards)
-        # self.episode_rewards = []
-        self.niter = 0
 
         if self.collect_states:
             return self.old_states
@@ -288,12 +310,12 @@ class SDC_Full_Env(gym.Env):
             return -steps * self.step_penalty
 
         # reward = -self.initial_residual / 100
-        # reward = -np.linalg.norm(residual, np.inf)
+        # reward = -self._inf_norm(residual)
         reward = abs(
-            (math.log(np.linalg.norm(old_residual * self.norm_factor, np.inf))
-             - math.log(np.linalg.norm(residual * self.norm_factor, np.inf)))
-            / (math.log(np.linalg.norm(self.initial_residual
-                                       * self.norm_factor, np.inf))
+            (math.log(self._inf_norm(old_residual * self.norm_factor))
+             - math.log(self._inf_norm(residual * self.norm_factor)))
+            / (math.log(self._inf_norm(self.initial_residual
+                                       * self.norm_factor))
                - math.log(self.restol * self.norm_factor)),
         )
         reward *= self.residual_weight
@@ -347,29 +369,18 @@ class SDC_Step_Env(SDC_Full_Env):
 
         u, old_residual = self.state
 
-        # I read somewhere that the actions should be scaled to [-1,1],
-        # scale it back to [0,1] here...
-        if self.do_scale:
-            scaled_action = np.interp(action, (-1, 1), (0, 1))
-        else:
-            scaled_action = action
+        scaled_action = self._scale_action(action)
 
-        # Get Q_delta, based on self.prec (and/or scaled_action)
-        Qdmat = self._get_prec(scaled_action=scaled_action)
-
-        # Compute the inverse of P
-        Pinv = np.linalg.inv(
-            np.eye(self.coll.num_nodes) - self.lam * self.dt * Qdmat,
-        )
+        Pinv = self._compute_pinv(scaled_action)
 
         # Do the iteration (note that we already have the residual)
         u += Pinv @ old_residual
 
         # The new residual and its norm
-        residual = self.u0 - self.C @ u
+        residual = self._compute_residual(u)
 
-        norm_res = np.linalg.norm(residual, np.inf)
-        norm_res_old = np.linalg.norm(old_residual, np.inf)
+        norm_res = self._inf_norm(residual)
+        norm_res_old = self._inf_norm(old_residual)
 
         self.niter += 1
 
