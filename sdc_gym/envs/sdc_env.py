@@ -266,7 +266,7 @@ class SDC_Full_Env(gym.Env):
             # Try if this works instead of the line below it.
             # I didn't use it for safety, but it's a bit faster.
             # self.old_states[:] = 0
-            self.old_states = np.zeros((self.M * 2, self.max_iters),
+            self.old_states = np.zeros((u.size * 2, self.max_iters),
                                        dtype=np.complex128)
             self.old_states[:, 0] = np.concatenate((u, residual))
 
