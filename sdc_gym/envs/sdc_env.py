@@ -47,11 +47,12 @@ class SDC_Full_Env(gym.Env):
         self.niter = None
         self.restol = restol
         self.dt = dt
+        self.M = M
         self.coll = CollGaussRadau_Right(M, 0, 1)
         self.Q = self.coll.Qmat[1:, 1:]
         self.C = None
         self.lam = None
-        self.u0 = np.ones(self.coll.num_nodes, dtype=np.complex128)
+        self.u0 = np.ones(M, dtype=np.complex128)
         self.old_res = None
         self.prec = prec
         self.initial_residual = None
@@ -106,10 +107,8 @@ class SDC_Full_Env(gym.Env):
     def set_num_episodes(self, num_episodes):
         self.num_episodes = num_episodes
 
-    def _get_prec(self, scaled_action, M):
-        """Return a preconditioner based on the `scaled_action`.
-        `M` is the problem size.
-        """
+    def _get_prec(self, scaled_action):
+        """Return a preconditioner based on the `scaled_action`."""
         # Decide which preconditioner to use
         # (depending on self.prec string)... not very elegant
         if self.prec is None:
@@ -121,7 +120,7 @@ class SDC_Full_Env(gym.Env):
             Qdmat = U.T
         elif self.prec.lower() == 'min':
             Qdmat = np.zeros_like(self.Q)
-            if M == 7:
+            if self.M == 7:
                 x = [
                     0.15223871397682717,
                     0.12625448001038536,
@@ -131,7 +130,7 @@ class SDC_Full_Env(gym.Env):
                     0.14075805578834127,
                     0.15636085758812895
                 ]
-            elif M == 5:
+            elif self.M == 5:
                 x = [
                     0.2818591930905709,
                     0.2011358490453793,
@@ -139,14 +138,14 @@ class SDC_Full_Env(gym.Env):
                     0.11790265267514095,
                     0.1571629578515223,
                 ]
-            elif M == 4:
+            elif self.M == 4:
                 x = [
                     0.3198786751412953,
                     0.08887606314792469,
                     0.1812366328324738,
                     0.23273925017954,
                 ]
-            elif M == 3:
+            elif self.M == 3:
                 x = [
                     0.3203856825077055,
                     0.1399680686269595,
@@ -155,7 +154,7 @@ class SDC_Full_Env(gym.Env):
             else:
                 # if M is some other number, take zeros. This won't work
                 # well, but does not raise an error
-                x = np.zeros(M)
+                x = np.zeros(self.M)
             np.fill_diagonal(Qdmat, x)
         else:
             raise NotImplementedError()
@@ -177,7 +176,7 @@ class SDC_Full_Env(gym.Env):
 
         # Precompute the inverse of P
         Pinv = np.linalg.inv(
-            np.eye(self.coll.num_nodes) - self.lam * self.dt * Qdmat,
+            np.eye(self.M) - self.lam * self.dt * Qdmat,
         )
         norm_res_old = np.linalg.norm(old_residual, np.inf)
 
@@ -255,10 +254,10 @@ class SDC_Full_Env(gym.Env):
         )
 
         # Compute the system matrix
-        self.C = np.eye(self.coll.num_nodes) - self.lam * self.dt * self.Q
+        self.C = np.eye(self.M) - self.lam * self.dt * self.Q
 
         # Initial guess u^0 and initial residual for the state
-        u = np.ones(self.coll.num_nodes, dtype=np.complex128)
+        u = np.ones(self.M, dtype=np.complex128)
         residual = self.u0 - self.C @ u
         self.initial_residual = residual
 
