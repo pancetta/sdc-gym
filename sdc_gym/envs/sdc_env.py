@@ -16,12 +16,13 @@ class SDC_Full_Env(gym.Env):
     """This environment implements a full iteration of SDC, i.e. for
     each step we iterate until
         (a) convergence is reached (residual norm is below restol),
-        (b) more than 50 iterations are done (not converged),
+        (b) more than `self.max_iters` iterations are done (not converged),
         (c) diverged.
     """
     action_space = None
     observation_space = None
     num_envs = 1
+    max_iters = 50
 
     def __init__(
             self,
@@ -80,7 +81,7 @@ class SDC_Full_Env(gym.Env):
         self.observation_space = spaces.Box(
             low=-1E10,
             high=+1E10,
-            shape=(M * 2, 50) if collect_states else (2, M),
+            shape=(M * 2, self.max_iters) if collect_states else (2, M),
             dtype=np.complex128,
         )
         # I read somewhere that the actions should be scaled to [-1,1],
@@ -95,7 +96,8 @@ class SDC_Full_Env(gym.Env):
         self.seed(seed)
         self.state = None
         if collect_states:
-            self.old_states = np.zeros((M * 2, 50), dtype=np.complex128)
+            self.old_states = np.zeros((M * 2, self.max_iters),
+                                       dtype=np.complex128)
 
     def seed(self, seed=None):
         self.np_random, seed = seeding.np_random(seed)
@@ -183,7 +185,7 @@ class SDC_Full_Env(gym.Env):
         err = False
         self.niter = 0
         # Start the loop
-        while not done and not self.niter >= 50:
+        while not done and not self.niter >= self.max_iters:
             self.niter += 1
 
             # This is the iteration (yes, there is a typo in the slides,
@@ -197,13 +199,13 @@ class SDC_Full_Env(gym.Env):
             # so far this seems to be the best setup:
             #   - stop if residual gets larger than the initial one
             #     (not needed, but faster)
-            #   - reward = -50, if this happens (crucial!)
-            if self.collect_states and self.niter < 50:
+            #   - reward = -self.max_iters, if this happens (crucial!)
+            if self.collect_states and self.niter < self.max_iters:
                 self.old_states[:, self.niter] = np.concatenate((u, residual))
             err = err or norm_res > norm_res_old * 100
             if err:
-                reward = -self.step_penalty * 51
-                # reward = -51
+                reward = -self.step_penalty * (self.max_iters + 1)
+                # reward = -(self.max_iters + 1)
                 break
             # check for convergence
             done = norm_res < self.restol
@@ -265,7 +267,8 @@ class SDC_Full_Env(gym.Env):
             # Try if this works instead of the line below it.
             # I didn't use it for safety, but it's a bit faster.
             # self.old_states[:] = 0
-            self.old_states = np.zeros((u.size * 2, 50), dtype=np.complex128)
+            self.old_states = np.zeros((self.M * 2, self.max_iters),
+                                       dtype=np.complex128)
             self.old_states[:, 0] = np.concatenate((u, residual))
 
         # self.rewards.append(self.episode_rewards)
@@ -295,7 +298,7 @@ class SDC_Full_Env(gym.Env):
                - math.log(self.restol * self.norm_factor)),
         )
         reward *= self.residual_weight
-        # jede der 50 Iterationen wird bestraft
+        # jede der `self.max_iters` Iterationen wird bestraft
         reward -= steps * self.step_penalty
         return reward
 
@@ -337,7 +340,7 @@ class SDC_Step_Env(SDC_Full_Env):
     """This environment implements a single iteration of SDC, i.e.
     for each step we just do one iteration and stop if
         (a) convergence is reached (residual norm is below restol),
-        (b) more than 50 iterations are done (not converged),
+        (b) more than `self.max_iters` iterations are done (not converged),
         (c) diverged.
     """
 
@@ -376,28 +379,29 @@ class SDC_Step_Env(SDC_Full_Env):
         # so far this seems to be the best setup:
         #   - stop if residual gets larger than the initial one
         #     (not needed, but faster)
-        #   - reward = -50, if this happens (crucial!)
+        #   - reward = -self.max_iters, if this happens (crucial!)
         err = err or norm_res > norm_res_old * 100
         # Stop iterating when converged, when iteration count is
         # too high or when something bad happened
-        done = norm_res < self.restol or self.niter >= 50 or err
+        done = norm_res < self.restol or self.niter >= self.max_iters or err
 
         if not err:
             reward = self.reward_func(old_residual, residual, self.niter)
             # print(reward)
         else:
-            # return overall reward of -51
-            # (slightly worse than -50 in the "not converged" scenario)
-            # reward = -self.step_penalty * (52 - self.niter)
-            reward = -self.step_penalty * 51
-            # reward = -51 + self.niter
-            # reward = -50 + self.niter
+            # return overall reward of -(self.max_iters + 1)
+            # (slightly worse than -self.max_iters in the
+            # "not converged" scenario)
+            # reward = -self.step_penalty * ((self.max_iters + 2) - self.niter)
+            reward = -self.step_penalty * (self.max_iters + 1)
+            # reward = -(self.max_iters + 1) + self.niter
+            # reward = -self.max_iters + self.niter
 
         # self.episode_rewards.append(reward)
         # self.norm_resids.append(norm_res)
 
         self.state = (u, residual)
-        if self.collect_states and self.niter < 50:
+        if self.collect_states and self.niter < self.max_iters:
             self.old_states[:, self.niter] = np.concatenate((u, residual))
 
         info = {
