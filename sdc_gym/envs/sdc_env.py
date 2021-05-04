@@ -172,7 +172,7 @@ class SDC_Full_Env(gym.Env):
             scaled_action = action
 
         # Get Q_delta, based on self.prec (and/or scaled_action)
-        Qdmat = self._get_prec(scaled_action=scaled_action, M=u.size)
+        Qdmat = self._get_prec(scaled_action=scaled_action)
 
         # Precompute the inverse of P
         Pinv = np.linalg.inv(
@@ -266,7 +266,7 @@ class SDC_Full_Env(gym.Env):
             # Try if this works instead of the line below it.
             # I didn't use it for safety, but it's a bit faster.
             # self.old_states[:] = 0
-            self.old_states = np.zeros((u.size * 2, self.max_iters),
+            self.old_states = np.zeros((self.M * 2, self.max_iters),
                                        dtype=np.complex128)
             self.old_states[:, 0] = np.concatenate((u, residual))
 
@@ -355,7 +355,7 @@ class SDC_Step_Env(SDC_Full_Env):
             scaled_action = action
 
         # Get Q_delta, based on self.prec (and/or scaled_action)
-        Qdmat = self._get_prec(scaled_action=scaled_action, M=u.size)
+        Qdmat = self._get_prec(scaled_action=scaled_action)
 
         # Compute the inverse of P
         Pinv = np.linalg.inv(
