@@ -215,6 +215,15 @@ def parse_args():
         ),
     )
     parser.add_argument(
+        '--reward_strategy',
+        type=str,
+        default='iteration_only',
+        help=(
+            'How to reward the agent. '
+            'For choices, see the respective environments.'
+        ),
+    )
+    parser.add_argument(
         '--collect_states',
         type=utils.parse_bool,
         default=False,

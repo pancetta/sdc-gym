@@ -269,6 +269,7 @@ def make_env(
             'residual_weight',
             'step_penalty',
             'reward_iteration_only',
+            'reward_strategy',
             'collect_states',
     ]:
         args_kwargs[arg] = kwargs.pop(arg, getattr(args, arg))
