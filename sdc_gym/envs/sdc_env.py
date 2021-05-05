@@ -110,7 +110,10 @@ class SDC_Full_Env(gym.Env):
     def _scale_action(self, action):
         # I read somewhere that the actions should be scaled to [-1,1],
         # scale it back to [0,1] here...
-        scaled_action = np.interp(action, (-1, 1), (0, 1))
+        if self.do_scale:
+            scaled_action = np.interp(action, (-1, 1), (0, 1))
+        else:
+            scaled_action = action
         return scaled_action
 
     def _get_prec(self, scaled_action):
