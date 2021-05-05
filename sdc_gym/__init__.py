@@ -11,3 +11,9 @@ register(
     entry_point='sdc_gym.envs:SDC_Step_Env',
     max_episode_steps=50,
 )
+
+register(
+    id='sdc-v4',
+    entry_point='sdc_gym.envs:SDC_Full_Force_Env',
+    max_episode_steps=50,
+)
