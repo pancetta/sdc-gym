@@ -190,6 +190,9 @@ class SDC_Full_Env(gym.Env):
         Pinv = self._compute_pinv(scaled_action)
         norm_res_old = self._inf_norm(old_residual)
 
+        # Re-use what we already have
+        residual = old_residual
+
         done = False
         err = False
         self.niter = 0
@@ -199,7 +202,7 @@ class SDC_Full_Env(gym.Env):
 
             # This is the iteration (yes, there is a typo in the slides,
             # this one is correct!)
-            u += Pinv @ self._compute_residual(u)
+            u += Pinv @ residual
             # Compute the residual and its norm
             residual = self._compute_residual(u)
             norm_res = self._inf_norm(residual)
@@ -291,10 +294,10 @@ class SDC_Full_Env(gym.Env):
         if self.collect_states:
             # Try if this works instead of the line below it.
             # I didn't use it for safety, but it's a bit faster.
-            # self.old_states[:] = 0
-            self.old_states = np.zeros((self.M * 2, self.max_iters),
-                                       dtype=np.complex128)
-            self.old_states[:, 0] = np.concatenate((u, residual))
+            self.old_states[:, 0] = np.concatenate(self.state)
+            self.old_states[:, 1:] = 0
+            # self.old_states = np.zeros((self.M * 2, self.max_iters),
+            #                            dtype=np.complex128)
 
         if self.collect_states:
             return self.old_states
@@ -412,7 +415,7 @@ class SDC_Step_Env(SDC_Full_Env):
 
         self.state = (u, residual)
         if self.collect_states and self.niter < self.max_iters:
-            self.old_states[:, self.niter] = np.concatenate((u, residual))
+            self.old_states[:, self.niter] = np.concatenate(self.state)
 
         info = {
             'residual': norm_res,
