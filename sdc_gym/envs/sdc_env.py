@@ -37,7 +37,8 @@ class SDC_Full_Env(gym.Env):
             norm_factor=1,
             residual_weight=0.5,
             step_penalty=0.1,
-            reward_iteration_only=True,
+            reward_iteration_only=None,
+            reward_strategy='iteration_only',
             collect_states=False,
             use_doubles=True,
             do_scale=True,
@@ -67,7 +68,12 @@ class SDC_Full_Env(gym.Env):
         self.norm_factor = norm_factor
         self.residual_weight = residual_weight
         self.step_penalty = step_penalty
-        self.reward_iteration_only = reward_iteration_only
+        if reward_iteration_only is None:
+            self.reward_strategy = reward_strategy.lower()
+        elif reward_iteration_only:
+            self.reward_strategy = 'iteration_only'
+        else:
+            self.reward_strategy = 'residual_change'
         self.collect_states = collect_states
         self.do_scale = do_scale
 
@@ -229,7 +235,10 @@ class SDC_Full_Env(gym.Env):
             reward = self.reward_func(
                 self.initial_residual,
                 residual,
+                done,
                 self.niter,
+                scaled_action,
+                Pinv,
             )
 
         done = True
@@ -307,14 +316,10 @@ class SDC_Full_Env(gym.Env):
         else:
             return self.state
 
-    def reward_func(self, old_residual, residual, steps=1):
-        """Return the reward obtained with the `old_residual` with the
-        new `residual`.
-        `steps` indicates how many time steps to penalize.
-        """
-        if self.reward_iteration_only:
-            return -steps * self.step_penalty
+    def _reward_iteration_only(self, steps):
+        return -steps * self.step_penalty
 
+    def _reward_residual_change(self, old_residual, residual, steps):
         # reward = -self.initial_residual / 100
         # reward = -self._inf_norm(residual)
         reward = abs(
@@ -328,6 +333,119 @@ class SDC_Full_Env(gym.Env):
         # jede der `self.max_iters` Iterationen wird bestraft
         reward -= steps * self.step_penalty
         return reward
+
+    def _reward_gauss_kernel(self, residual, reached_convergence, steps):
+        self.gauss_facts = [1]
+        self.gauss_invs = [1 / self.restol]
+        norm_res = self._inf_norm(residual)
+        gauss_dist = sum(
+            (gauss_fact
+             * np.exp(-(norm_res * gauss_inv)**2 / 2))
+            for (gauss_fact, gauss_inv) in zip(self.gauss_facts,
+                                               self.gauss_invs)
+        )
+        if reached_convergence:
+            extra_fact = (self.max_iters + 1 - steps)**2 * 10
+        else:
+            extra_fact = 1
+
+        reward = gauss_dist * extra_fact
+        return reward
+
+    def _reward_fast_convergence(self, residual, reached_convergence, steps):
+        norm_res = self._inf_norm(residual)
+        if reached_convergence:
+            extra_fact = (self.max_iters + 1 - steps)**2 * 10
+        else:
+            extra_fact = 1
+
+        if norm_res == 0:
+            # Smallest double exponent 1e-323's -log is about 744
+            reward = 1000
+        else:
+            reward = -math.log(norm_res)
+        reward *= extra_fact
+        return reward
+
+    def _reward_smooth_fast_convergence(
+            self, residual, reached_convergence, steps):
+        norm_res = self._inf_norm(residual)
+        if reached_convergence:
+            extra_fact = (self.max_iters + 1 - steps)**2 * 10
+        else:
+            extra_fact = 1
+
+        if norm_res == 0:
+            # Smallest double exponent 1e-323's -log is about 744
+            reward = 1000
+        else:
+            reward = -math.log(norm_res)
+        if reward > 1:
+            reward = 1 + math.log(reward)
+        reward *= extra_fact
+        return reward
+
+    def _reward_smoother_fast_convergence(
+            self, residual, reached_convergence, steps):
+        norm_res = self._inf_norm(residual)
+        if reached_convergence:
+            extra_fact = (self.max_iters + 1 - steps)**2 * 10
+        else:
+            extra_fact = 1
+
+        if norm_res == 0:
+            # Smallest double exponent 1e-323's -log is about 744
+            reward = 1000
+        else:
+            reward = -math.log(norm_res)
+        reward *= extra_fact
+        if reward > 1:
+            reward = 1 + math.log(reward)
+        return reward
+
+    def _reward_spectral_radius(self, scaled_action, Pinv):
+        Qdmat = self._get_prec(scaled_action)
+        mulpinv = Pinv.dot(self.Q - Qdmat)
+        eigvals = np.linalg.eigvals(self.lam * self.dt * mulpinv)
+        return max(abs(eigvals))
+
+    def reward_func(
+            self,
+            old_residual,
+            residual,
+            reached_convergence,
+            steps,
+            scaled_action,
+            Pinv,
+    ):
+        """Return the reward obtained with the `old_residual` with the
+        new `residual`.
+        `reached_convergence` indicates whether convergence was reached.
+        `steps` indicates how many time steps to penalize.
+        `scaled_action` is the action taken.
+        `Pinv` is the iteration matrix.
+        """
+        if self.reward_strategy == 'iteration_only':
+            return self._reward_iteration_only(steps)
+        elif self.reward_strategy == 'residual_change':
+            return self._reward_residual_change(old_residual, residual, steps)
+        elif self.reward_strategy == 'gauss_kernel':
+            return self._reward_gauss_kernel(
+                residual, reached_convergence, steps)
+        elif self.reward_strategy == 'fast_convergence':
+            return self._reward_fast_convergence(
+                residual, reached_convergence, steps)
+        elif self.reward_strategy == 'smooth_fast_convergence':
+            return self._reward_smooth_fast_convergence(
+                residual, reached_convergence, steps)
+        elif self.reward_strategy == 'smoother_fast_convergence':
+            return self._reward_smoother_fast_convergence(
+                residual, reached_convergence, steps)
+        elif self.reward_strategy == 'spectral_radius':
+            return self._reward_spectral_radius(scaled_action, Pinv)
+
+        raise NotImplementedError(
+            f'unknown reward strategy {self.reward_strategy}')
 
     def plot_rewards(self):
         plt.xlabel('time')
@@ -397,12 +515,18 @@ class SDC_Step_Env(SDC_Full_Env):
         #     (not needed, but faster)
         #   - reward = -self.max_iters, if this happens (crucial!)
         err = err or norm_res > norm_res_old * 100
-        # Stop iterating when converged, when iteration count is
-        # too high or when something bad happened
-        done = norm_res < self.restol or self.niter >= self.max_iters or err
+        # Stop iterating when converged
+        done = norm_res < self.restol
 
         if not err:
-            reward = self.reward_func(old_residual, residual, self.niter)
+            reward = self.reward_func(
+                old_residual,
+                residual,
+                done,
+                self.niter,
+                scaled_action,
+                Pinv,
+            )
             # print(reward)
         else:
             # return overall reward of -(self.max_iters + 1)
@@ -412,7 +536,9 @@ class SDC_Step_Env(SDC_Full_Env):
             reward = -self.step_penalty * (self.max_iters + 1)
             # reward = -(self.max_iters + 1) + self.niter
             # reward = -self.max_iters + self.niter
-
+        # Stop iterating when iteration count is too high or when
+        # something bad happened
+        done = done or self.niter >= self.max_iters or err
         # self.episode_rewards.append(reward)
         # self.norm_resids.append(norm_res)
 
