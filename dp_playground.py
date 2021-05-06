@@ -452,7 +452,8 @@ def main():
             if mean_loss < best_loss and steps > 0:
                 best_loss = mean_loss
                 cp_path = Path(f'best_dp_model_{script_start}.npy')
-                save_model(cp_path, opt_get_params(opt_state), steps + old_steps)
+                save_model(
+                    cp_path, opt_get_params(opt_state), steps + old_steps)
 
             print(f'[{step:>{steps_num_digits}d}/{steps}] '
                   f'mean_loss: {mean_loss:.5f}')
