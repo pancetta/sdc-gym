@@ -416,7 +416,7 @@ def main():
         rng_key,
     )
 
-    input_shape = (args.batch_size, args.M)
+    input_shape = (args.batch_size, 1)
     model_init, model = build_model(args.M)
     rng_key, subkey = jax.random.split(rng_key)
     _, params = model_init(subkey, input_shape)
