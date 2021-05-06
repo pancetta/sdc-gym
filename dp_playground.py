@@ -269,7 +269,7 @@ def test_model(model, params, env, ntests, name,
 
     for i in range(ntests):
         env.reset()
-        obs = jnp.stack([env_.lam for env_ in env.envs])
+        obs = jnp.array([env_.lam for env_ in env.envs]).reshape(-1, 1)
         done = [False for _ in range(num_envs)]
         if env.envs[0].prec is not None:
             action = [np.empty(env.action_space.shape,
@@ -289,7 +289,7 @@ def test_model(model, params, env, ntests, name,
                 action = np.array(action)
 
             _, rewards, done, info = env.step(action)
-            obs = jnp.stack([env_.lam for env_ in env.envs])
+            obs = jnp.array([env_.lam for env_ in env.envs]).reshape(-1, 1)
 
             if stats_path is not None:
                 stats['action'].append(action)
