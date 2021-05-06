@@ -34,25 +34,29 @@ class DataGenerator:
         self.batch_size = batch_size
         self.rng_key = rng_key
 
+        self.lam_real_low = self.lambda_real_interval[0]
+        self.lam_real_high = self.lambda_real_interval[1]
+
+        self.lam_imag_low = self.lambda_imag_interval[0]
+        self.lam_imag_high = self.lambda_imag_interval[1]
+
+    def _generate_lambdas(self):
+        rng_key, subkey = jax.random.split(self.rng_key)
+        self.rng_key, subkey2 = jax.random.split(rng_key)
+        lams = (
+            1 * jax.random.uniform(subkey, (self.batch_size, 1),
+                                   minval=self.lam_real_low,
+                                   maxval=self.lam_real_high)
+            + 1j * jax.random.uniform(subkey2, (self.batch_size, 1),
+                                      minval=self.lam_imag_low,
+                                      maxval=self.lam_imag_high)
+        )
+        return lams
+
     def __iter__(self):
-        lam_real_low = self.lambda_real_interval[0]
-        lam_real_high = self.lambda_real_interval[1]
-
-        lam_imag_low = self.lambda_imag_interval[0]
-        lam_imag_high = self.lambda_imag_interval[1]
-
         while True:
-            rng_key, subkey = jax.random.split(self.rng_key)
-            self.rng_key, subkey2 = jax.random.split(rng_key)
-            lam = (
-                1 * jax.random.uniform(subkey, (self.batch_size, 1),
-                                       minval=lam_real_low,
-                                       maxval=lam_real_high)
-                + 1j * jax.random.uniform(subkey2, (self.batch_size, 1),
-                                          minval=lam_imag_low,
-                                          maxval=lam_imag_high)
-            )
-            yield lam
+            lams = self._generate_lambdas()
+            yield lams
 
 
 class NormLoss:
@@ -412,9 +416,10 @@ def main():
         rng_key,
     )
 
+    input_shape = (args.batch_size, args.M)
     model_init, model = build_model(args.M)
     rng_key, subkey = jax.random.split(rng_key)
-    _, params = model_init(subkey, (args.batch_size, 1))
+    _, params = model_init(subkey, input_shape)
     opt_state, opt_update, opt_get_params = build_opt(args.learning_rate,
                                                       params)
     loss_func = NormLoss(args.M, args.dt)
