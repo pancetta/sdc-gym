@@ -413,7 +413,9 @@ def main():
         # norm_res = jax.vmap(lambda x: jnp.linalg.norm(x[1, :], jnp.inf))(obs)
         # return jnp.mean(norm_res)
         _, _, _, info = env.step(diags)
-        # assert jnp.allclose(info['residual'] * info['niter'], jax.vmap(lambda x, y: x * y)(info['residual'], info['niter']))
+        # assert jnp.allclose(info['residual'] * info['niter'],
+        #                     jax.vmap(lambda x, y: x * y)(
+        #                         info['residual'], info['niter']))
         norm_res = jnp.mean(info['residual'] * info['niter'])
         # norm_res = jnp.mean(jnp.array(list(map(
         #     lambda i: info[0]['residual' + str(i)],
