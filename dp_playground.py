@@ -176,6 +176,9 @@ def parse_args():
     args = parser.parse_args()
     args.envname = 'sdc-v0'
 
+    args.lambda_real_interval = sorted(args.lambda_real_interval)
+    args.lambda_imag_interval = sorted(args.lambda_imag_interval)
+
     # Dummy values
     args.lambda_real_interpolation_interval = None
     args.norm_factor = 0.0
