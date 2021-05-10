@@ -29,3 +29,9 @@ register(
     entry_point='sdc_gym.envs:JAX_SDC_Step_Vec_Env',
     max_episode_steps=50,
 )
+
+register(
+    id='jax-sdc-v4',
+    entry_point='sdc_gym.envs:JAX_SDC_Fix_Vec_Env',
+    max_episode_steps=1,
+)

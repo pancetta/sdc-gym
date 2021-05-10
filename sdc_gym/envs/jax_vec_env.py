@@ -641,3 +641,61 @@ class SDC_Step_Env(SDC_Full_Env):
             return (self.old_states, reward, done, info)
         else:
             return (self.state, reward, done, info)
+
+
+class SDC_Fix_Env(SDC_Full_Env):
+    max_iters = 5
+
+    def _setup_jit(self):
+        self._map_scale_action = jax.vmap(self._scale_action, (None, 0))
+        self._map_compute_pinv = jax.vmap(self._compute_pinv)
+        self._map_inf_norm = jax.vmap(self._inf_norm)
+        self._map_update_u = jax.vmap(self._update_u)
+        self._map_compute_residual = jax.vmap(
+            self._compute_residual, (None, 0, 0))
+        self._map_isnan = jax.vmap(jnp.isnan)
+        self._map_isinf = jax.vmap(jnp.isinf)
+        self._map_reward_func = jax.vmap(self.reward_func)
+        self._map_compute_system_matrix = jax.vmap(self._compute_system_matrix)
+
+    def step(self, action):
+        u, old_residual = self.state
+
+        scaled_action = self._map_scale_action(self.do_scale, action)
+
+        Pinv = self._map_compute_pinv(self.lam, scaled_action)
+
+        # Re-use what we already have
+        residual = old_residual
+
+        # Start the loop
+        # print('new ep!')
+        for i in range(self.max_iters):
+            # This is the iteration (yes, there is a typo in the slides,
+            # this one is correct!)
+            u = self._map_update_u(u, Pinv, residual)
+            # Compute the residual and its norm
+            residual = self._map_compute_residual(self.u0, self.C, u)
+            # print(f'{self.niter:>2}: {norm_res}')
+        norm_res = self._map_inf_norm(residual)
+
+        self.niter = jnp.full(
+            (self.batch_size,), self.max_iters, dtype=jnp.uint8)
+
+        reward = 0
+        done = True
+        # self.episode_rewards.append(reward)
+        # self.norm_resids.append(norm_res)
+
+        self.state = (u, residual)
+        # self.state = (u, residual, self.niter)
+
+        info = {
+            'residual': norm_res,
+            'niter': self.niter,
+            'lam': self.lam,
+        }
+        if self.collect_states:
+            return (self.old_states, reward, done, info)
+        else:
+            return (jnp.hstack(self.state), reward, done, info)
