@@ -191,17 +191,23 @@ def parse_args():
     return args
 
 
-def build_model(M):
+def build_model(M, train):
     scale = 1e-3
     glorot_normal = jax.nn.initializers.variance_scaling(
         scale, "fan_avg", "truncated_normal")
     normal = jax.nn.initializers.normal(scale)
+
+    dropout_rate = 0.2
+    mode = 'train' if train and dropout_rate > 0 else 'test'
+
     (model_init, model_apply) = stax.serial(
         stax.Dense(64, glorot_normal, normal),
+        stax.Dropout(dropout_rate, mode),
         stax.Relu,
         # stax.Dense(256),
         # stax.Relu,
         stax.Dense(64, glorot_normal, normal),
+        stax.Dropout(dropout_rate, mode),
         stax.Relu,
         stax.Dense(M, glorot_normal, normal),
     )
@@ -242,7 +248,7 @@ def save_model(path, params, steps):
 #         jnp.savez(f, opt_state=opt_state, steps=steps)
 
 
-def test_model(model, params, env, ntests, name,
+def test_model(model, params, rng_key, env, ntests, name,
                loss_func=None, stats_path=None):
     """Test the `model` in the Gym `env` `ntests` times.
     `name` is the name for the test run for logging purposes.
@@ -285,7 +291,8 @@ def test_model(model, params, env, ntests, name,
 
             # Do not predict an action when we would discard it anyway
             if env.envs[0].prec is None:
-                action = model(params, obs)
+                rng_key, subkey = jax.random.split(rng_key)
+                action = model(params, obs, rng=subkey)
                 # loss = loss_func(action, obs)
                 # print('test mean lam:', jnp.mean(obs).item(),
                 #       'loss:', loss.item(), 'action:', action)
@@ -340,9 +347,10 @@ def run_tests(model, params, args,
     # Load the trained agent for testing
     if isinstance(model, (Path, str)):
         path = model
-        model_init, model = build_model(args.M)
+        model_init, model = build_model(args.M, train=False)
         params,  _ = load_model(path)
 
+    rng_key = jax.random.PRNGKey(seed)
     num_test_envs = args.batch_size
     ntests = int(args.tests)
     ntests = utils.maybe_fix_ntests(ntests, num_test_envs)
@@ -353,7 +361,8 @@ def run_tests(model, params, args,
                          lambda_real_interpolation_interval=None,
                          do_scale=False)
     results_RL = test_model(
-        model, params, env, ntests, 'RL', loss_func, stats_path=stats_path)
+        model, params, rng_key, env, ntests, 'RL', loss_func,
+        stats_path=stats_path)
 
     # Restart the whole thing, but now using the LU preconditioner (no RL here)
     # LU is serial and the de-facto standard. Beat this (or at least be on par)
@@ -366,7 +375,7 @@ def run_tests(model, params, args,
         lambda_real_interpolation_interval=None,
         do_scale=False,
     )
-    results_LU = test_model(model, params, env, ntests, 'LU')
+    results_LU = test_model(model, params, rng_key, env, ntests, 'LU')
 
     # Restart the whole thing, but now using the minization preconditioner
     # (no RL here)
@@ -380,7 +389,7 @@ def run_tests(model, params, args,
         lambda_real_interpolation_interval=None,
         do_scale=False,
     )
-    results_min = test_model(model, params, env, ntests, 'MIN')
+    results_min = test_model(model, params, rng_key, env, ntests, 'MIN')
     duration = time.perf_counter() - start_time
     print(f'Testing took {duration} seconds.')
 
@@ -410,17 +419,18 @@ def main():
         eval_seed += 1
 
     rng_key = jax.random.PRNGKey(args.seed)
+    rng_key, subkey = jax.random.split(rng_key)
 
     dataloader = DataGenerator(
         args.M,
         args.lambda_real_interval,
         args.lambda_imag_interval,
         args.batch_size,
-        rng_key,
+        subkey,
     )
 
     input_shape = (args.batch_size, 1)
-    model_init, model = build_model(args.M)
+    model_init, model = build_model(args.M, train=True)
     rng_key, subkey = jax.random.split(rng_key)
     _, params = model_init(subkey, input_shape)
     opt_state, opt_update, opt_get_params = build_opt(args.learning_rate,
@@ -431,17 +441,19 @@ def main():
         params, old_steps = load_model(args.model_path)
 
     @jax.jit
-    def loss(params, lams):
-        diags = model(params, lams)
-        return loss_func(lams, diags)
+    def loss(params, lams, rng_key):
+        diags = model(params, lams, rng=rng_key)
+        loss_ = loss_func(lams, diags)
+        return loss_
 
     @jax.jit
-    def update(i, opt_state, lams):
+    def update(i, opt_state, lams, rng_key):
         params = opt_get_params(opt_state)
-        loss_, gradient = jax.value_and_grad(loss)(params, lams)
+        rng_key, subkey = jax.random.split(rng_key)
+        loss_, gradient = jax.value_and_grad(loss)(params, lams, subkey)
         # print(gradient)
         opt_state = opt_update(i, gradient, opt_state)
-        return loss_, opt_state
+        return loss_, opt_state, rng_key
 
     old_steps = 0
     steps = int(args.steps)
@@ -451,7 +463,8 @@ def main():
     last_losses = np.zeros(100)
     start_time = time.perf_counter()
     for (step, lams) in enumerate(dataloader):
-        loss_, opt_state = update(step + old_steps, opt_state, lams)
+        loss_, opt_state, rng_key = update(
+            step + old_steps, opt_state, lams, rng_key)
 
         last_losses[step % len(last_losses)] = loss_.item()
 
@@ -471,6 +484,7 @@ def main():
     duration = time.perf_counter() - start_time
     print(f'Training took {duration} seconds.')
 
+    _, model = build_model(args.M, train=False)
     params = opt_get_params(opt_state)
     if steps > 0:
         cp_path = Path(f'dp_model_{script_start}.npy')
