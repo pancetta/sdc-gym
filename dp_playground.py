@@ -436,6 +436,7 @@ def main():
     opt_state, opt_update, opt_get_params = build_opt(args.learning_rate,
                                                       params)
     loss_func = NormLoss(args.M, args.dt)
+    weight_decay_factor = 0.01
 
     if args.model_path is not None:
         params, old_steps = load_model(args.model_path)
@@ -444,7 +445,8 @@ def main():
     def loss(params, lams, rng_key):
         diags = model(params, lams, rng=rng_key)
         loss_ = loss_func(lams, diags)
-        return loss_
+        weight_penalty = optimizers.l2_norm(params)
+        return loss_ + weight_decay_factor * weight_penalty
 
     @jax.jit
     def update(i, opt_state, lams, rng_key):

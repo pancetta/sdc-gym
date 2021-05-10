@@ -396,6 +396,7 @@ def main():
                        ).replace(':', '-').replace(' ', 'T')
     args = parse_args()
     utils.setup(True)
+    weight_decay_factor = 0.0
 
     eval_seed = args.seed
     if eval_seed is not None:
@@ -437,7 +438,9 @@ def main():
             raise ValueError('encountered NaNs')
         if jnp.isinf(norm_res):
             raise ValueError('encountered infs')
-        return norm_res
+
+        weight_penalty = optimizers.l2_norm(params)
+        return norm_res + weight_decay_factor * weight_penalty
         # norm_res = jnp.mean(norm_res)
         # # print(obs.shape)
         # print(obs[0, 1, :])
