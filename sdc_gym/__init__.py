@@ -17,3 +17,15 @@ register(
     entry_point='sdc_gym.envs:SDC_Full_Force_Env',
     max_episode_steps=50,
 )
+
+register(
+    id='jax-sdc-v2',
+    entry_point='sdc_gym.envs:JAX_SDC_Full_Vec_Env',
+    max_episode_steps=1,
+)
+
+register(
+    id='jax-sdc-v3',
+    entry_point='sdc_gym.envs:JAX_SDC_Step_Vec_Env',
+    max_episode_steps=50,
+)
