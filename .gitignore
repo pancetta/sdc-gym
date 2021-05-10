@@ -135,5 +135,6 @@ dmypy.json
 *.json
 *.pkl
 *.npy
+*.npy.steps
 *.npz
 *.pt
