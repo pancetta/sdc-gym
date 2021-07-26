@@ -310,8 +310,6 @@ class SDC_Full_Env(gym.Env):
             'niter': self.niter,
             'lam': self.lam,
         }
-        # for i, norm_res_ in enumerate(norm_res):
-        #     info['residual' + str(i)] = norm_res_
         if self.collect_states:
             return (self.old_states, reward, done, info)
         else:
