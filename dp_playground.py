@@ -198,15 +198,16 @@ def build_model(M, train):
 
     dropout_rate = 0.2
     mode = 'train' if train and dropout_rate > 0 else 'test'
+    dropout_keep_rate = 1 - dropout_rate
 
     (model_init, model_apply) = stax.serial(
         stax.Dense(64, glorot_normal, normal),
-        stax.Dropout(dropout_rate, mode),
+        stax.Dropout(dropout_keep_rate, mode),
         stax.Relu,
         # stax.Dense(256),
         # stax.Relu,
         stax.Dense(64, glorot_normal, normal),
-        stax.Dropout(dropout_rate, mode),
+        stax.Dropout(dropout_keep_rate, mode),
         stax.Relu,
         stax.Dense(M, glorot_normal, normal),
     )
