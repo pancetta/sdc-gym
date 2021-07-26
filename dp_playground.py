@@ -197,7 +197,7 @@ def build_model(M, train):
     normal = jax.nn.initializers.normal(scale)
 
     dropout_rate = 0.2
-    mode = 'train' if train and dropout_rate > 0 else 'test'
+    mode = 'train' if train else 'test'
     dropout_keep_rate = 1 - dropout_rate
 
     (model_init, model_apply) = stax.serial(
