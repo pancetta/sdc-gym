@@ -196,7 +196,7 @@ def build_model(M, train):
         scale, "fan_avg", "truncated_normal")
     normal = jax.nn.initializers.normal(scale)
 
-    dropout_rate = 0.2
+    dropout_rate = 0.0
     mode = 'train' if train else 'test'
     dropout_keep_rate = 1 - dropout_rate
 
@@ -440,7 +440,7 @@ def main():
     opt_state, opt_update, opt_get_params = build_opt(args.learning_rate,
                                                       params)
     loss_func = NormLoss(args.M, args.dt)
-    weight_decay_factor = 0.01
+    weight_decay_factor = 0.0
 
     @jax.jit
     def loss(params, lams, rng_key):
