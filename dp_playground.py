@@ -41,8 +41,7 @@ class DataGenerator:
         self.lam_imag_high = self.lambda_imag_interval[1]
 
     def _generate_lambdas(self):
-        rng_key, subkey = jax.random.split(self.rng_key)
-        self.rng_key, subkey2 = jax.random.split(rng_key)
+        self.rng_key, subkey, subkey2 = jax.random.split(self.rng_key, 3)
         lams = (
             1 * jax.random.uniform(subkey, (self.batch_size, 1),
                                    minval=self.lam_real_low,
