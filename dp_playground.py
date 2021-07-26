@@ -287,7 +287,7 @@ def test_model(model, params, rng_key, env, ntests, name,
 
         while not all(done):
             if stats_path is not None:
-                stats['obs'].append(obs)
+                stats['obs'].append(np.array(obs))
 
             # Do not predict an action when we would discard it anyway
             if env.envs[0].prec is None:
@@ -303,7 +303,7 @@ def test_model(model, params, rng_key, env, ntests, name,
 
             if stats_path is not None:
                 stats['action'].append(action)
-                stats['reward'].append(rewards)
+                stats['reward'].append(np.array(rewards))
                 for info_ in info:
                     for key in info_:
                         stats[key].append(info_[key])
