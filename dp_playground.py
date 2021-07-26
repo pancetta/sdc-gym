@@ -433,13 +433,14 @@ def main():
     model_init, model = build_model(args.M, train=True)
     rng_key, subkey = jax.random.split(rng_key)
     _, params = model_init(subkey, input_shape)
+    if args.model_path is not None:
+        params, old_steps = load_model(args.model_path)
+        params = list(params)
+
     opt_state, opt_update, opt_get_params = build_opt(args.learning_rate,
                                                       params)
     loss_func = NormLoss(args.M, args.dt)
     weight_decay_factor = 0.01
-
-    if args.model_path is not None:
-        params, old_steps = load_model(args.model_path)
 
     @jax.jit
     def loss(params, lams, rng_key):
