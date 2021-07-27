@@ -9,6 +9,7 @@ from jax.experimental import stax
 from jax.experimental import optimizers
 import matplotlib.pyplot as plt
 import numpy as np
+import optax
 from pySDC.implementations.collocation_classes.gauss_radau_right import \
     CollGaussRadau_Right
 
@@ -191,7 +192,7 @@ def parse_args():
 
 
 def build_model(M, train):
-    scale = 1e-3
+    scale = 1e-7
     glorot_normal = jax.nn.initializers.variance_scaling(
         scale, "fan_avg", "truncated_normal")
     normal = jax.nn.initializers.normal(scale)
@@ -201,12 +202,12 @@ def build_model(M, train):
     dropout_keep_rate = 1 - dropout_rate
 
     (model_init, model_apply) = stax.serial(
-        stax.Dense(64, glorot_normal, normal),
+        stax.Dense(128, glorot_normal, normal),
         stax.Dropout(dropout_keep_rate, mode),
         stax.Relu,
-        # stax.Dense(256),
-        # stax.Relu,
-        stax.Dense(64, glorot_normal, normal),
+        stax.Dense(256, glorot_normal, normal),
+        stax.Relu,
+        stax.Dense(128, glorot_normal, normal),
         stax.Dropout(dropout_keep_rate, mode),
         stax.Relu,
         stax.Dense(M, glorot_normal, normal),
@@ -215,7 +216,9 @@ def build_model(M, train):
 
 
 def build_opt(lr, params):
-    lr = optimizers.polynomial_decay(lr, 15000, lr * 1e-7, 2.0)
+    # lr = optimizers.polynomial_decay(lr, 15000, lr * 1e-7, 2.0)
+    # lr = optax.cosine_onecycle_schedule(15000, lr, 0.3, 1e7)
+    lr = optax.cosine_onecycle_schedule(30000, 2 * lr, 0.3, 2e7)
 
     (opt_init, opt_update, opt_get_params) = optimizers.adam(lr)
     opt_state = opt_init(params)
@@ -442,20 +445,23 @@ def main():
     opt_state, opt_update, opt_get_params = build_opt(args.learning_rate,
                                                       params)
     loss_func = NormLoss(args.M, args.dt)
-    weight_decay_factor = 0.0
+    weight_decay_factor = 0.1
+    weight_decay_schedule = optimizers.polynomial_decay(
+        weight_decay_factor, 15000, 0.0, 1.0)
 
     @jax.jit
-    def loss(params, lams, rng_key):
+    def loss(params, lams, i, rng_key):
         diags = model(params, lams, rng=rng_key)
         loss_ = loss_func(lams, diags)
         weight_penalty = optimizers.l2_norm(params)
+        weight_decay_factor = weight_decay_schedule(i)
         return loss_ + weight_decay_factor * weight_penalty
 
     @jax.jit
     def update(i, opt_state, lams, rng_key):
         params = opt_get_params(opt_state)
         rng_key, subkey = jax.random.split(rng_key)
-        loss_, gradient = jax.value_and_grad(loss)(params, lams, subkey)
+        loss_, gradient = jax.value_and_grad(loss)(params, lams, i.astype(float), subkey)
         # print(gradient)
         opt_state = opt_update(i, gradient, opt_state)
         return loss_, opt_state, rng_key

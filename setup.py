@@ -11,5 +11,8 @@ setup(
         'matplotlib',
         'stable_baselines',
         'pyzt',
+        'jax',
+        'jaxlib',
+        'optax',
     ],
 )
