@@ -350,6 +350,8 @@ def run_tests(model, params, args,
         model_init, model = build_model(args.M, train=False)
         params,  _ = load_model(path)
 
+    model = jax.jit(model)
+
     rng_key = jax.random.PRNGKey(seed)
     num_test_envs = args.batch_size
     ntests = int(args.tests)

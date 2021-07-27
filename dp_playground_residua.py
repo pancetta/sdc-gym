@@ -357,6 +357,8 @@ def run_tests(model, params, args,
         model_init, model = build_model(args.M)
         params,  _ = load_model(path)
 
+    model = jax.jit(model)
+
     num_test_envs = args.batch_size
     ntests = int(args.tests)
     ntests = utils.maybe_fix_ntests(ntests, num_test_envs)
