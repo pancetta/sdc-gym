@@ -191,7 +191,7 @@ def parse_args():
     return args
 
 
-def build_model(M, train):
+def _from_model_arch(model_arch, train):
     scale = 1e-7
     glorot_normal = jax.nn.initializers.variance_scaling(
         scale, "fan_avg", "truncated_normal")
@@ -201,18 +201,50 @@ def build_model(M, train):
     mode = 'train' if train else 'test'
     dropout_keep_rate = 1 - dropout_rate
 
-    (model_init, model_apply) = stax.serial(
-        stax.Dense(128, glorot_normal, normal),
-        stax.Dropout(dropout_keep_rate, mode),
-        stax.Relu,
-        stax.Dense(256, glorot_normal, normal),
-        stax.Relu,
-        stax.Dense(128, glorot_normal, normal),
-        stax.Dropout(dropout_keep_rate, mode),
-        stax.Relu,
-        stax.Dense(M, glorot_normal, normal),
-    )
+    model_arch_real = []
+    for tup in model_arch:
+        if not isinstance(tup, tuple):
+            tup = (tup,)
+        name = tup[0]
+        if len(tup) > 1:
+            args = tup[1]
+        if len(tup) > 2:
+            kwargs = tup[2]
+
+        layer = getattr(stax, name)
+        if name == 'Dense':
+            args = args + (glorot_normal, normal)
+        elif name == 'Dropout':
+            args = args + (dropout_keep_rate, mode)
+
+        if len(tup) == 1:
+            model_arch_real.append(layer)
+        elif len(tup) == 2:
+            model_arch_real.append(layer(*args))
+        elif len(tup) == 3:
+            model_arch_real.append(layer(*args, **kwargs))
+        else:
+            raise ValueError('error in model_arch syntax')
+    (model_init, model_apply) = stax.serial(*model_arch_real)
     return (model_init, model_apply)
+
+
+def build_model(M, train):
+    model_arch = [
+        ('Dense', (128,)),
+        ('Dropout', ()),
+        ('Relu',),
+        ('Dense', (256,)),
+        ('Relu',),
+        ('Dense', (128,)),
+        ('Dropout', ()),
+        ('Relu',),
+        ('Dense', (M,)),
+    ]
+
+    (model_init, model_apply) = _from_model_arch(model_arch, train=train)
+
+    return (model_init, model_apply, model_arch)
 
 
 def build_opt(lr, params):
@@ -228,14 +260,18 @@ def build_opt(lr, params):
 def load_model(path):
     with open(path, 'rb') as f:
         weights = jnp.load(f, allow_pickle=True)
+    with open(str(path) + '.structure', 'rb') as f:
+        model_arch = jnp.load(f, allow_pickle=True)
     with open(str(path) + '.steps', 'rb') as f:
         steps = jnp.load(f, allow_pickle=True)
-    return weights, steps
+    return weights, model_arch, steps
 
 
-def save_model(path, params, steps):
+def save_model(path, params, model_arch, steps):
     with open(path, 'wb') as f:
         jnp.save(f, params)
+    with open(str(path) + '.structure', 'wb') as f:
+        jnp.save(f, model_arch)
     with open(str(path) + '.steps', 'wb') as f:
         jnp.save(f, steps)
 
@@ -350,8 +386,8 @@ def run_tests(model, params, args,
     # Load the trained agent for testing
     if isinstance(model, (Path, str)):
         path = model
-        model_init, model = build_model(args.M, train=False)
-        params,  _ = load_model(path)
+        params, model_arch, _ = load_model(path)
+        model = _from_model_arch(model_arch, train=False)
 
     model = jax.jit(model)
 
@@ -435,11 +471,13 @@ def main():
     )
 
     input_shape = (args.batch_size, 1)
-    model_init, model = build_model(args.M, train=True)
+    model_init, model, model_arch = build_model(args.M, train=True)
+
     rng_key, subkey = jax.random.split(rng_key)
     _, params = model_init(subkey, input_shape)
     if args.model_path is not None:
-        params, old_steps = load_model(args.model_path)
+        params, model_arch, old_steps = load_model(args.model_path)
+        model = _from_model_arch(model_arch, train=True)
         params = list(params)
 
     opt_state, opt_update, opt_get_params = build_opt(args.learning_rate,
@@ -485,7 +523,11 @@ def main():
                 best_loss = mean_loss
                 cp_path = Path(f'best_dp_model_{script_start}.npy')
                 save_model(
-                    cp_path, opt_get_params(opt_state), steps + old_steps)
+                    cp_path,
+                    opt_get_params(opt_state),
+                    model_arch,
+                    steps + old_steps,
+                )
 
             print(f'[{step:>{steps_num_digits}d}/{steps}] '
                   f'mean_loss: {mean_loss:.5f}')
@@ -495,13 +537,15 @@ def main():
     duration = time.perf_counter() - start_time
     print(f'Training took {duration} seconds.')
 
-    _, model = build_model(args.M, train=False)
+    _, model, _ = build_model(args.M, train=False)
     params = opt_get_params(opt_state)
     if steps > 0:
         cp_path = Path(f'dp_model_{script_start}.npy')
-        save_model(cp_path, params, steps + old_steps)
+        save_model(cp_path, params, model_arch, steps + old_steps)
     elif args.model_path is not None:
-        params, _ = load_model(args.model_path)
+        params, model_arch, _ = load_model(args.model_path)
+        model = _from_model_arch(model_arch, train=False)
+        params = list(params)
     fig_path = Path(f'dp_results_{script_start}.pdf')
     run_tests(model, params, args,
               seed=eval_seed, fig_path=fig_path, loss_func=loss)
