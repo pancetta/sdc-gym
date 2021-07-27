@@ -387,7 +387,7 @@ def run_tests(model, params, args,
     if isinstance(model, (Path, str)):
         path = model
         params, model_arch, _ = load_model(path)
-        model = _from_model_arch(model_arch, train=False)
+        _, model = _from_model_arch(model_arch, train=False)
 
     model = jax.jit(model)
 
@@ -477,7 +477,7 @@ def main():
     _, params = model_init(subkey, input_shape)
     if args.model_path is not None:
         params, model_arch, old_steps = load_model(args.model_path)
-        model = _from_model_arch(model_arch, train=True)
+        _, model = _from_model_arch(model_arch, train=True)
         params = list(params)
 
     opt_state, opt_update, opt_get_params = build_opt(args.learning_rate,
@@ -544,7 +544,7 @@ def main():
         save_model(cp_path, params, model_arch, steps + old_steps)
     elif args.model_path is not None:
         params, model_arch, _ = load_model(args.model_path)
-        model = _from_model_arch(model_arch, train=False)
+        _, model = _from_model_arch(model_arch, train=False)
         params = list(params)
     fig_path = Path(f'dp_results_{script_start}.pdf')
     run_tests(model, params, args,
