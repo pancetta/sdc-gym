@@ -479,6 +479,8 @@ def main():
         params, model_arch, old_steps = load_model(args.model_path)
         _, model = _from_model_arch(model_arch, train=True)
         params = list(params)
+    else:
+        old_steps = 0
 
     opt_state, opt_update, opt_get_params = build_opt(args.learning_rate,
                                                       params)
@@ -504,7 +506,6 @@ def main():
         opt_state = opt_update(i, gradient, opt_state)
         return loss_, opt_state, rng_key
 
-    old_steps = 0
     steps = int(args.steps)
     steps_num_digits = len(str(steps))
 
