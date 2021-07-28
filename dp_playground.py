@@ -501,7 +501,8 @@ def main():
     def update(i, opt_state, lams, rng_key):
         params = opt_get_params(opt_state)
         rng_key, subkey = jax.random.split(rng_key)
-        loss_, gradient = jax.value_and_grad(loss)(params, lams, i.astype(float), subkey)
+        loss_, gradient = jax.value_and_grad(loss)(
+            params, lams, i.astype(float), subkey)
         # print(gradient)
         opt_state = opt_update(i, gradient, opt_state)
         return loss_, opt_state, rng_key
