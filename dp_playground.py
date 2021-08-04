@@ -525,6 +525,15 @@ def run_tests(model, params, args,
     plt.show()
 
 
+def get_cp_name(args, script_start):
+    re_interval = '_'.join(map(str, sorted(args.lambda_real_interval)))
+    im_interval = '_'.join(map(str, sorted(args.lambda_imag_interval)))
+    return (
+        f'dp_model_M_{args.M}_re_{re_interval}_im_{im_interval}_loss_{{}}_'
+        f'{script_start}.npy'
+    )
+
+
 def main():
     script_start = str(datetime.datetime.now()
                        ).replace(':', '-').replace(' ', 'T')
@@ -594,6 +603,9 @@ def main():
     steps = int(args.steps)
     steps_num_digits = len(str(steps))
 
+    cp_name = get_cp_name(args, script_start)
+    best_cp_name = 'best_' + cp_name
+
     best_loss = np.inf
     last_losses = np.zeros(100)
     start_time = time.perf_counter()
@@ -607,9 +619,9 @@ def main():
             mean_loss = jnp.mean(last_losses[:step + 1]).item()
             if mean_loss < best_loss and steps > 0:
                 best_loss = mean_loss
-                cp_path = Path(f'best_dp_model_{script_start}.npy')
+                best_cp_path = Path(best_cp_name.format(mean_loss))
                 save_model(
-                    cp_path,
+                    best_cp_path,
                     opt_get_params(opt_state),
                     model_arch,
                     steps + old_steps,
@@ -626,8 +638,13 @@ def main():
     _, model, _ = build_model(args.M, train=False)
     params = opt_get_params(opt_state)
     if steps > 0:
-        cp_path = Path(f'dp_model_{script_start}.npy')
-        save_model(cp_path, params, model_arch, steps + old_steps)
+        cp_path = Path(cp_name.format(mean_loss))
+        save_model(
+            cp_path,
+            params,
+            model_arch,
+            steps + old_steps,
+        )
     elif args.model_path is not None:
         params, model_arch, _ = load_model(args.model_path)
         _, model = _from_model_arch(model_arch, train=False)
