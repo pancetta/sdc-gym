@@ -524,7 +524,7 @@ def main():
     start_time = time.perf_counter()
     for (step, lams) in enumerate(dataloader):
         loss_, opt_state, rng_key = update(
-            step + old_steps, opt_state, lams, rng_key)
+            jnp.array(step + old_steps), opt_state, lams, rng_key)
 
         last_losses[step % len(last_losses)] = loss_.item()
 
