@@ -308,6 +308,7 @@ def test_model(model, params, rng_key, env, ntests, name,
                     'lam',
                     'residual',
                     'terminal_observation',
+                    'TimeLimit.truncated',
             ]
         }
 
