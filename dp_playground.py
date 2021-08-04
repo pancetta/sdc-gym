@@ -645,9 +645,11 @@ def main():
             model_arch,
             steps + old_steps,
         )
+        # Load best checkpoint for testing
+        params, _, _ = load_model(best_cp_path)
     elif args.model_path is not None:
         params, model_arch, _ = load_model(args.model_path)
-        params = list(params)
+    params = list(params)
     fig_path = Path(f'dp_results_{script_start}.pdf')
     run_tests(model, params, args,
               seed=eval_seed, fig_path=fig_path, loss_func=loss)
