@@ -651,8 +651,15 @@ def main():
         params, model_arch, _ = load_model(args.model_path)
     params = list(params)
     fig_path = Path(f'dp_results_{script_start}.pdf')
-    run_tests(model, params, args,
-              seed=eval_seed, fig_path=fig_path, loss_func=loss)
+    run_tests(
+        model,
+        params,
+        args,
+        seed=eval_seed,
+        fig_path=fig_path,
+        loss_func=loss,
+        # stats_path=args.model_path + '.stats.npz',
+    )
 
 
 if __name__ == '__main__':
