@@ -247,11 +247,78 @@ def build_model(M, train):
     return (model_init, model_apply, model_arch)
 
 
+class RandLR:
+    def __init__(self, low, high):
+        self.low = low
+        self.high = high
+
+    def __call__(self, step):
+        rng_key = jax.random.PRNGKey(step)
+        return jax.random.uniform(
+            rng_key, (), minval=self.low, maxval=self.high)
+
+
+class SineLR:
+    def __init__(self, lr, amplitude, steps_per_wave, phase=0.0):
+        self.lr = lr
+        self.amplitude = amplitude
+        self.steps_per_wave = steps_per_wave
+        self.phase = phase
+
+    def __call__(self, step):
+        return (
+            self.lr
+            + jnp.sin(
+                step * jnp.pi * 2 / self.steps_per_wave
+                + self.phase
+            ) * self.amplitude
+        )
+
+
+class CosineLR:
+    def __init__(self, lr, amplitude, steps_per_wave, phase=0.0):
+        self.lr = lr
+        self.amplitude = amplitude
+        self.steps_per_wave = steps_per_wave
+        self.phase = phase
+
+    def __call__(self, step):
+        return (
+            self.lr
+            + jnp.cos(
+                step * jnp.pi * 2 / self.steps_per_wave
+                + self.phase
+            ) * self.amplitude
+        )
+
+
 def build_opt(lr, params, old_steps):
     # lr = optimizers.polynomial_decay(lr, 15000, lr * 1e-7, 2.0)
-    # lr = optax.cosine_onecycle_schedule(15000, lr, 0.3, 1e7)
-    lr = optax.cosine_onecycle_schedule(30000, 2 * lr, 0.3, 2e7)
+    # lr = optimizers.polynomial_decay(2 * lr, 50000, lr * 2e-9, 2.0)
+    # lr = optax.cosine_onecycle_schedule(19000, 2e2 * lr, 0.3, 2e9)
+    transition_steps = 30000
+    max_lr = 2 * lr
+    start_lr = 3e-13
+    final_lr = 1e-9
+    wave_base_lr = 1e-10
+    wave_max_lr = 1e-7
 
+    div_factor = max_lr / start_lr
+    final_div_factor = start_lr / final_lr
+    lr = optax.cosine_onecycle_schedule(transition_steps, max_lr, 0.1, div_factor, final_div_factor)
+    lr2 = optax.cosine_onecycle_schedule(transition_steps, wave_max_lr, 0.1, wave_max_lr / final_lr, final_lr / 1e-10)
+    lr3 = optax.cosine_onecycle_schedule(transition_steps, wave_max_lr * 1e-1, 0.1, wave_max_lr / final_lr, final_lr / 1e-11)
+    lr4 = optax.cosine_onecycle_schedule(transition_steps, wave_max_lr * 1e-2, 0.1, wave_max_lr / final_lr, final_lr / 1e-12)
+    lr = optax.join_schedules([lr, lr2, lr3, lr4], [transition_steps, transition_steps * 2, transition_steps * 3])
+    # lr = RandLR(2e-9 * lr, 2 * lr)
+    amplitude = wave_max_lr - wave_base_lr
+    # lr2 = SineLR(wave_base_lr, amplitude, 50000)
+    # lr = optax.join_schedules([lr, lr2], [transition_steps, 30000 + 50000 * 3])
+
+    # These are good for generalization. However, we would like the
+    # model to overfit so adaptive methods seem to be the better choice.
+    # (opt_init, opt_update, opt_get_params) = optimizers.sgd(lr_)
+    # (opt_init, opt_update, opt_get_params) = optimizers.nesterov(lr, 0.9)
     (opt_init, opt_update, opt_get_params) = optimizers.adam(lr)
     opt_state = opt_init(params)
     return (opt_state, opt_update, opt_get_params)
