@@ -489,7 +489,7 @@ def main():
     # Better to avoid this; always worsened results.
     weight_decay_factor = 0.0
     weight_decay_schedule = optimizers.polynomial_decay(
-        weight_decay_factor, 15000, 0.0, 1.0)
+        weight_decay_factor, 15000, 0.0, 2.0)
 
     @jax.jit
     def loss(params, lams, i, rng_key):
