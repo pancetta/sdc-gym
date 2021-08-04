@@ -192,6 +192,8 @@ def parse_args():
 
 
 def _from_model_arch(model_arch, train):
+    # For smaller intervals, this should be higher (e.g. 1e-3);
+    # for larger intervals lower is better (e.g. 1e-7).
     scale = 1e-7
     glorot_normal = jax.nn.initializers.variance_scaling(
         scale, "fan_avg", "truncated_normal")
@@ -230,6 +232,12 @@ def _from_model_arch(model_arch, train):
 
 
 def build_model(M, train):
+    # 12 (or more) hidden layers give good results sometimes.
+    #
+    # For very large intervals in both real and imaginary space, weird
+    # architectures like 3 hidden layers with 2 neurons may work as well
+    # as 3 hidden layers with 512 neurons. However, those results can
+    # probably be improved.
     model_arch = [
         ('Dense', (128,)),
         ('Dropout', ()),
