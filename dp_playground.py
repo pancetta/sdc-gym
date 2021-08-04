@@ -486,6 +486,11 @@ def main():
     opt_state, opt_update, opt_get_params = build_opt(args.learning_rate,
                                                       params)
     loss_func = NormLoss(args.M, args.dt)
+
+    max_grad_norm = 0.5
+    # grad_clipping_schedule = optimizers.polynomial_decay(
+    #     max_grad_norm, 15000, 1e-7, 1.0)
+
     # Better to avoid this; always worsened results.
     weight_decay_factor = 0.0
     weight_decay_schedule = optimizers.polynomial_decay(
@@ -506,6 +511,8 @@ def main():
         loss_, gradient = jax.value_and_grad(loss)(
             params, lams, i.astype(float), subkey)
         # print(gradient)
+        # max_grad_norm = grad_clipping_schedule(i)
+        gradient = optimizers.clip_grads(gradient, max_grad_norm)
         opt_state = opt_update(i, gradient, opt_state)
         return loss_, opt_state, rng_key
 
