@@ -234,7 +234,7 @@ def build_model(M, train):
         ('Dense', (128,)),
         ('Dropout', ()),
         ('Relu',),
-        ('Dense', (256,)),
+        ('Dense', (128,)),
         ('Relu',),
         ('Dense', (128,)),
         ('Dropout', ()),
