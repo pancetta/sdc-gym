@@ -635,7 +635,7 @@ def main():
     duration = time.perf_counter() - start_time
     print(f'Training took {duration} seconds.')
 
-    _, model, _ = build_model(args.M, train=False)
+    _, model = _from_model_arch(model_arch, train=False)
     params = opt_get_params(opt_state)
     if steps > 0:
         cp_path = Path(cp_name.format(mean_loss))
@@ -647,7 +647,6 @@ def main():
         )
     elif args.model_path is not None:
         params, model_arch, _ = load_model(args.model_path)
-        _, model = _from_model_arch(model_arch, train=False)
         params = list(params)
     fig_path = Path(f'dp_results_{script_start}.pdf')
     run_tests(model, params, args,
