@@ -247,7 +247,7 @@ def build_model(M, train):
     return (model_init, model_apply, model_arch)
 
 
-def build_opt(lr, params):
+def build_opt(lr, params, old_steps):
     # lr = optimizers.polynomial_decay(lr, 15000, lr * 1e-7, 2.0)
     # lr = optax.cosine_onecycle_schedule(15000, lr, 0.3, 1e7)
     lr = optax.cosine_onecycle_schedule(30000, 2 * lr, 0.3, 2e7)
@@ -483,8 +483,8 @@ def main():
     else:
         old_steps = 0
 
-    opt_state, opt_update, opt_get_params = build_opt(args.learning_rate,
-                                                      params)
+    opt_state, opt_update, opt_get_params = build_opt(
+        args.learning_rate, params, old_steps)
     loss_func = NormLoss(args.M, args.dt)
 
     max_grad_norm = 0.5
