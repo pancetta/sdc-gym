@@ -526,8 +526,8 @@ def run_tests(model, params, args,
 
 
 def get_cp_name(args, script_start):
-    re_interval = '_'.join(map(str, sorted(args.lambda_real_interval)))
-    im_interval = '_'.join(map(str, sorted(args.lambda_imag_interval)))
+    re_interval = '_'.join(map(str, args.lambda_real_interval))
+    im_interval = '_'.join(map(str, args.lambda_imag_interval))
     return (
         f'dp_model_M_{args.M}_re_{re_interval}_im_{im_interval}_loss_{{}}_'
         f'{script_start}.npy'
