@@ -158,7 +158,7 @@ def parse_args():
         '--model_path',
         type=str,
         default=None,
-        help='Model checkpoint to load (a .pt file).',
+        help='Model checkpoint to load (a .npy file).',
     )
     parser.add_argument(
         '--tests',
