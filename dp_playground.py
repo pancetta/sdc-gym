@@ -646,10 +646,16 @@ def main():
             steps + old_steps,
         )
         # Load best checkpoint for testing
-        params, _, _ = load_model(best_cp_path)
+        load_cp_path = best_cp_path
     elif args.model_path is not None:
-        params, model_arch, _ = load_model(args.model_path)
-    params = list(params)
+        load_cp_path = args.model_path
+    else:
+        load_cp_path = None
+
+    if load_cp_path is not None:
+        params, _, _ = load_model(load_cp_path)
+        print(f'Testing model at {load_cp_path}.')
+        params = list(params)
     fig_path = Path(f'dp_results_{script_start}.pdf')
     run_tests(
         model,
