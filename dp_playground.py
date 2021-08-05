@@ -468,7 +468,7 @@ def run_tests(model, params, args,
     model = jax.jit(model)
 
     rng_key = jax.random.PRNGKey(seed)
-    num_test_envs = args.batch_size
+    num_test_envs = 1
     ntests = int(args.tests)
     ntests = utils.maybe_fix_ntests(ntests, num_test_envs)
 
@@ -555,7 +555,7 @@ def main():
         subkey,
     )
 
-    input_shape = (args.batch_size, 1)
+    input_shape = (1,)
     model_init, model, model_arch = build_model(args.M, train=True)
 
     rng_key, subkey = jax.random.split(rng_key)
