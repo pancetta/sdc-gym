@@ -351,6 +351,16 @@ def save_model(path, params, model_arch, steps):
         jnp.save(f, steps)
 
 
+def delete_model(path):
+    if path is None:
+        return
+    if not isinstance(path, Path):
+        path = Path(path)
+    path.unlink(missing_ok=True)
+    path.with_name(path.name + '.structure').unlink(missing_ok=True)
+    path.with_name(path.name + '.steps').unlink(missing_ok=True)
+
+
 # def load_model(path):
 #     with open(path, 'rb') as f:
 #         cp = jnp.load(f)
@@ -605,6 +615,7 @@ def main():
 
     cp_name = get_cp_name(args, script_start)
     best_cp_name = 'best_' + cp_name
+    best_cp_path = None
 
     best_loss = np.inf
     last_losses = np.zeros(100)
@@ -619,6 +630,7 @@ def main():
             mean_loss = jnp.mean(last_losses[:step + 1]).item()
             if mean_loss < best_loss and steps > 0:
                 best_loss = mean_loss
+                prev_best_cp_path = best_cp_path
                 best_cp_path = Path(best_cp_name.format(mean_loss))
                 save_model(
                     best_cp_path,
@@ -626,6 +638,7 @@ def main():
                     model_arch,
                     steps + old_steps,
                 )
+                delete_model(prev_best_cp_path)
 
             print(f'[{step:>{steps_num_digits}d}/{steps}] '
                   f'mean_loss: {mean_loss:.5f}')
