@@ -17,6 +17,9 @@ from rl_playground import _store_test_stats, plot_results
 import utils
 
 
+Real = stax.elementwise(jnp.real)
+
+
 class DataGenerator:
     def __init__(
             self,
@@ -213,7 +216,11 @@ def _from_model_arch(model_arch, train):
         if len(tup) > 2:
             kwargs = tup[2]
 
-        layer = getattr(stax, name)
+        if name == 'Real':
+            layer = Real
+        else:
+            layer = getattr(stax, name)
+
         if name == 'Dense':
             args = args + (glorot_normal, normal)
         elif name == 'Dropout':
