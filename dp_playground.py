@@ -204,35 +204,49 @@ def _from_model_arch(model_arch, train):
     dropout_rate = 0.0
     mode = 'train' if train else 'test'
     dropout_keep_rate = 1 - dropout_rate
+    globals_ = globals()
+
+    args_dict = {
+        'Params': (normal,),
+        'Dense': (glorot_normal, normal),
+        'Dropout': (dropout_keep_rate, mode),
+    }
 
     model_arch_real = []
     for tup in model_arch:
         if not isinstance(tup, tuple):
-            tup = (tup,)
+            try:
+                tup = tuple(tup)
+            except TypeError:
+                tup = (tup,)
+
+        if len(tup) == 0 or len(tup) > 3:
+            raise ValueError('error in model_arch syntax')
+
         name = tup[0]
         if len(tup) > 1:
             args = tup[1]
+        else:
+            args = ()
         if len(tup) > 2:
             kwargs = tup[2]
+        else:
+            kwargs = {}
 
-        if name == 'Real':
-            layer = Real
+        if not hasattr(stax, name):
+            if name not in globals_:
+                raise ValueError(
+                    f'unknown layer name "{name}". Names are case-sensitive.')
+            layer = globals_[name]
         else:
             layer = getattr(stax, name)
 
-        if name == 'Dense':
-            args = args + (glorot_normal, normal)
-        elif name == 'Dropout':
-            args = args + (dropout_keep_rate, mode)
+        args = args + args_dict.get(name, ())
 
-        if len(tup) == 1:
-            model_arch_real.append(layer)
-        elif len(tup) == 2:
-            model_arch_real.append(layer(*args))
-        elif len(tup) == 3:
+        if len(tup) > 1:
             model_arch_real.append(layer(*args, **kwargs))
         else:
-            raise ValueError('error in model_arch syntax')
+            model_arch_real.append(layer)
     (model_init, model_apply) = stax.serial(*model_arch_real)
     return (model_init, model_apply)
 
