@@ -20,6 +20,17 @@ import utils
 Real = stax.elementwise(jnp.real)
 
 
+def Params(out_dim, init):
+    """Layer construction function for an identity layer of the parameters."""
+    def init_fun(rng, input_shape):
+        params = init(rng, (out_dim,))
+        return (out_dim, (params,))
+
+    def apply_fun(params, inputs, **kwargs):
+        return jnp.tile(params[0], (len(inputs), 1))
+    return init_fun, apply_fun
+
+
 class DataGenerator:
     def __init__(
             self,
@@ -268,6 +279,7 @@ def build_model(M, train):
         ('Dropout', ()),
         ('Relu',),
         ('Dense', (M,)),
+        # ('Params', (M,)),
     ]
 
     (model_init, model_apply) = _from_model_arch(model_arch, train=train)
