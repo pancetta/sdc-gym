@@ -199,9 +199,8 @@ def _from_model_arch(model_arch, train):
     # for larger intervals lower is better (e.g. 1e-7).
     scale = 1e-7
     glorot_normal = jax.nn.initializers.variance_scaling(
-        scale, "fan_avg", "truncated_normal")
-    normal = jax.nn.initializers.normal(scale)
-
+        scale, "fan_avg", "truncated_normal", dtype=float)
+    normal = jax.nn.initializers.normal(scale, dtype=float)
     dropout_rate = 0.0
     mode = 'train' if train else 'test'
     dropout_keep_rate = 1 - dropout_rate
