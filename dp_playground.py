@@ -131,14 +131,14 @@ def parse_args():
 
     parser.add_argument(
         '--lambda_real_interval',
-        type=int,
+        type=float,
         nargs=2,
         default=[-100, 0],
         help='Interval to sample the real part of lambda from.',
     )
     parser.add_argument(
         '--lambda_imag_interval',
-        type=int,
+        type=float,
         nargs=2,
         default=[0, 0],
         help='Interval to sample the imaginary part of lambda from.',
