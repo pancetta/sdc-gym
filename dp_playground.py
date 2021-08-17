@@ -321,7 +321,9 @@ def build_opt(lr, params, old_steps):
     final_div_factor = start_lr / final_lr
     lr = optax.cosine_onecycle_schedule(transition_steps, max_lr, 0.1, div_factor, final_div_factor)
     lr2 = optax.cosine_onecycle_schedule(transition_steps, wave_max_lr, 0.1, wave_max_lr / final_lr, final_lr / 1e-10)
+    # lr2 = optax.cosine_onecycle_schedule(transition_steps, wave_max_lr * 1e-1, 0.1, wave_max_lr / final_lr, final_lr / 1e-11)
     lr3 = optax.cosine_onecycle_schedule(transition_steps, wave_max_lr * 1e-1, 0.1, wave_max_lr / final_lr, final_lr / 1e-11)
+    # lr4 = optax.cosine_onecycle_schedule(transition_steps, wave_max_lr * 1e-1, 0.1, wave_max_lr / final_lr, final_lr / 1e-11)
     lr4 = optax.cosine_onecycle_schedule(transition_steps, wave_max_lr * 1e-2, 0.1, wave_max_lr / final_lr, final_lr / 1e-12)
     lr = optax.join_schedules([lr, lr2, lr3, lr4], [transition_steps, transition_steps * 2, transition_steps * 3])
     # lr = RandLR(2e-9 * lr, 2 * lr)
