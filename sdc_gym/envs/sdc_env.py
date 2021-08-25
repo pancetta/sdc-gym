@@ -171,6 +171,12 @@ class SDC_Full_Env(gym.Env):
                 # well, but does not raise an error
                 x = np.zeros(self.M)
             np.fill_diagonal(Qdmat, x)
+        elif self.prec.upper() == 'EE':
+            Qdmat = np.zeros_like(self.Q)
+            for m in range(self.M):
+                Qdmat[m, 0:m] = self.coll.delta_m[1:m + 1]
+        elif self.prec.lower() == 'zeros':
+            Qdmat = np.zeros_like(self.Q)
         else:
             raise NotImplementedError()
         return Qdmat
