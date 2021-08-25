@@ -102,7 +102,7 @@ class NormLoss:
         elif self.prec_type == 'lower_tri':
             Qdmat = jnp.zeros((self.M, self.M))
             Qdmat = Qdmat.at[jnp.tril_indices(self.M)].set(output)
-        elif self.prec_type == 'lower_lower_tri':
+        elif self.prec_type == 'strictly_lower_tri':
             Qdmat = jnp.zeros((self.M, self.M))
             Qdmat = Qdmat.at[jnp.tril_indices(self.M, k=-1)].set(output)
         else:
@@ -225,7 +225,7 @@ def parse_args():
         help=(
             'How to shape the learned preconditioner. Valid values '
             'include "diag", "lower_diag", "lower_tri", and '
-            '"lower_lower_tri" (with zero-diagonal).'
+            '"strictly_lower_tri" (with zero-diagonal).'
         ),
     )
     parser.add_argument(
@@ -320,7 +320,7 @@ def build_model(args, train):
         output_size = args.M - 1
     elif args.prec_type == 'lower_tri':
         output_size = args.M * 2
-    elif args.prec_type == 'lower_lower_tri':
+    elif args.prec_type == 'strictly_lower_tri':
         output_size = args.M
     else:
         raise UnknownPrecTypeError()
