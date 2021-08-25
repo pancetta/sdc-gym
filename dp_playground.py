@@ -32,6 +32,13 @@ def Params(out_dim, init):
     return init_fun, apply_fun
 
 
+class UnknownPrecTypeError(NotImplementedError):
+    def __init__(self, message=None, *args, **kwargs):
+        if message is None:
+            message = 'unknown `prec_type` (check your arguments)'
+        super().__init__(message, *args, **kwargs)
+
+
 class DataGenerator:
     def __init__(
             self,
@@ -80,14 +87,23 @@ class DataGenerator:
 
 
 class NormLoss:
-    def __init__(self, M, dt):
+    def __init__(self, M, dt, prec_type):
         coll = CollGaussRadau_Right(M, 0, 1)
         self.Q = jnp.array(coll.Qmat[1:, 1:])
         self.M = M
         self.dt = dt
+        self.prec_type = prec_type
 
-    def _get_spectral_radius(self, lam, diag):
-        Qdmat = jnp.diag(diag)
+    def _get_spectral_radius(self, lam, output):
+        if self.prec_type == 'diag':
+            Qdmat = jnp.diag(output)
+        elif self.prec_type == 'lower_diag':
+            Qdmat = jnp.diag(output, k=-1)
+        elif self.prec_type == 'lower_tri':
+            Qdmat = jnp.zeros((self.M, self.M))
+            Qdmat = Qdmat.at[jnp.tril_indices(self.M)].set(output)
+        else:
+            raise UnknownPrecTypeError()
 
         # Precompute the inverse of P
         Pinv = jnp.linalg.inv(
@@ -104,8 +120,8 @@ class NormLoss:
         # print(spectral_radius)
         return spectral_radius
 
-    def __call__(self, lams, diags):
-        return jnp.mean(jax.vmap(self._get_spectral_radius)(lams, diags))
+    def __call__(self, lams, outputs):
+        return jnp.mean(jax.vmap(self._get_spectral_radius)(lams, outputs))
 
 
 def parse_args():
@@ -200,6 +216,15 @@ def parse_args():
         help='Whether to use double precision.',
     )
     parser.add_argument(
+        '--prec_type',
+        type=str,
+        default='diag',
+        help=(
+            'How to shape the learned preconditioner. Valid values '
+            'include "diag", "lower_diag", and "lower_tri".'
+        ),
+    )
+    parser.add_argument(
         '--extensive_tests',
         type=utils.parse_bool,
         default=False,
@@ -285,6 +310,15 @@ def _from_model_arch(model_arch, train):
 
 
 def build_model(args, train):
+    if args.prec_type == 'diag':
+        output_size = args.M
+    elif args.prec_type == 'lower_diag':
+        output_size = args.M - 1
+    elif args.prec_type == 'lower_tri':
+        output_size = args.M * 2
+    else:
+        raise UnknownPrecTypeError()
+
     # 12 (or more) hidden layers give good results sometimes.
     #
     # For very large intervals in both real and imaginary space, weird
@@ -300,8 +334,8 @@ def build_model(args, train):
         ('Dense', (128,)),
         ('Dropout', ()),
         ('Relu',),
-        ('Dense', (args.M,)),
-        # ('Params', (args.M,)),
+        ('Dense', (output_size,)),
+        # ('Params', (output_size,)),
     ]
 
     (model_init, model_apply) = _from_model_arch(model_arch, train=train)
@@ -622,7 +656,7 @@ def get_cp_name(args, script_start):
     re_interval = '_'.join(map(str, args.lambda_real_interval))
     im_interval = '_'.join(map(str, args.lambda_imag_interval))
     return (
-        f'dp_model_M_{args.M}_re_{re_interval}_im_{im_interval}_loss_{{}}_'
+        f'dp_model_{args.prec_type}_M_{args.M}_re_{re_interval}_im_{im_interval}_loss_{{}}_'
         f'{script_start}.npy'
     )
 
@@ -667,7 +701,7 @@ def main():
 
     opt_state, opt_update, opt_get_params = build_opt(
         args, params, old_steps)
-    loss_func = NormLoss(args.M, args.dt)
+    loss_func = NormLoss(args.M, args.dt, args.prec_type)
 
     max_grad_norm = 0.5
     # grad_clipping_schedule = optimizers.polynomial_decay(
@@ -680,8 +714,8 @@ def main():
 
     # @jax.jit
     def loss(params, lams, i, rng_key):
-        diags = model(params, lams, rng=rng_key)
-        loss_ = loss_func(lams, diags)
+        outputs = model(params, lams, rng=rng_key)
+        loss_ = loss_func(lams, outputs)
         weight_penalty = optimizers.l2_norm(params)
         weight_decay_factor = weight_decay_schedule(i)
         return loss_ + weight_decay_factor * weight_penalty
