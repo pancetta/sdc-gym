@@ -335,6 +335,7 @@ def build_model(args, train):
         ('Dropout', ()),
         ('Relu',),
         ('Dense', (output_size,)),
+        # ('Real',),
         # ('Params', (output_size,)),
     ]
 
