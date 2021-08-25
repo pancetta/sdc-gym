@@ -274,7 +274,7 @@ def _from_model_arch(model_arch, train):
     return (model_init, model_apply)
 
 
-def build_model(M, train):
+def build_model(args, train):
     # 12 (or more) hidden layers give good results sometimes.
     #
     # For very large intervals in both real and imaginary space, weird
@@ -290,8 +290,8 @@ def build_model(M, train):
         ('Dense', (128,)),
         ('Dropout', ()),
         ('Relu',),
-        ('Dense', (M,)),
-        # ('Params', (M,)),
+        ('Dense', (args.M,)),
+        # ('Params', (args.M,)),
     ]
 
     (model_init, model_apply) = _from_model_arch(model_arch, train=train)
@@ -617,7 +617,7 @@ def main():
     )
 
     input_shape = (1,)
-    model_init, model, model_arch = build_model(args.M, train=True)
+    model_init, model, model_arch = build_model(args, train=True)
 
     rng_key, subkey = jax.random.split(rng_key)
     _, params = model_init(subkey, input_shape)
