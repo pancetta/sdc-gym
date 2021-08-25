@@ -193,6 +193,12 @@ def parse_args():
         help='Base random number seed.',
     )
 
+    parser.add_argument(
+        '--float64',
+        type=utils.parse_bool,
+        default=True,
+        help='Whether to use double precision.',
+    )
     args = parser.parse_args()
     args.envname = 'sdc-v0'
 
@@ -588,6 +594,7 @@ def main():
     script_start = str(datetime.datetime.now()
                        ).replace(':', '-').replace(' ', 'T')
     args = parse_args()
+    jax.config.update('jax_enable_x64', args.float64)
     utils.setup(True)
 
     eval_seed = args.seed
