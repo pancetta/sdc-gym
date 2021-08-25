@@ -199,6 +199,16 @@ def parse_args():
         default=True,
         help='Whether to use double precision.',
     )
+    parser.add_argument(
+        '--extensive_tests',
+        type=utils.parse_bool,
+        default=False,
+        help=(
+            'Whether to do testing on a zero-preconditioner and '
+            'one using explicit Euler as well.'
+        ),
+    )
+
     args = parser.parse_args()
     args.envname = 'sdc-v0'
 
@@ -565,6 +575,28 @@ def run_tests(model, params, args,
         do_scale=False,
     )
     results_min = test_model(model, params, rng_key, env, ntests, 'MIN')
+
+    if args.extensive_tests:
+        env = utils.make_env(
+            args,
+            num_envs=num_test_envs,
+            prec='zeros',
+            seed=seed,
+            lambda_real_interpolation_interval=None,
+            do_scale=False,
+        )
+        results_zeros = test_model(model, params, rng_key, env, ntests, 'zeros')
+
+        env = utils.make_env(
+            args,
+            num_envs=num_test_envs,
+            prec='EE',
+            seed=seed,
+            lambda_real_interpolation_interval=None,
+            do_scale=False,
+        )
+        results_EE = test_model(model, params, rng_key, env, ntests, 'EE')
+
     duration = time.perf_counter() - start_time
     print(f'Testing took {duration} seconds.')
 
@@ -575,6 +607,9 @@ def run_tests(model, params, args,
     plot_results(results_RL, color='b', label='RL')
     plot_results(results_LU, color='r', label='LU')
     plot_results(results_min, color='g', label='MIN')
+    if args.extensive_tests:
+        plot_results(results_zeros, color='orange', label='zeros')
+        plot_results(results_EE, color='pink', label='EE')
 
     plt.legend()
 
