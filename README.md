@@ -1,6 +1,6 @@
 # sdc-gym
 
-# Differentiable Programming RL
+## Differentiable Programming RL
 
 The main script is [./dp_playground.py](./dp_playground.py) or its
 variants. For command line arguments, see the according `parse_args`
@@ -10,9 +10,9 @@ Modify the `build_model` function according to the desired behaviour.
 Adjusting the learning rate schedule in the `build_opt` function may
 also prove worthwhile.
 
-## Training
+### Training
 
-### Standard Training
+#### Standard Training
 
 While the best models are obtained after multiple learning rate waves,
 training may also be stopped after 30000 steps. An example training
@@ -23,7 +23,7 @@ python dp_playground.py --M 5 --steps 200000 --batch_size 32 \
        --lambda_real_interval -100 0 --lambda_imag_interval -10 0
 ```
 
-### Continuing Training
+#### Continuing Training
 
 Training can be continued using the `--model_path` argument. Simply
 load a model checkpoint and continue as desired. Note that the
@@ -38,7 +38,7 @@ python dp_playground.py --M 5 --steps 200000 --batch_size 32 \
        --model_path best_dp_model_diag_M_5_re_-100.0_0.0_im_-10.0_0.0_loss_[...].npy
 ```
 
-### Optimizing Parameters Directly
+#### Optimizing Parameters Directly
 
 To obtain a model that optimizes M parameters directly, you would, in
 `build_model`, set `model_arch = [('Params', (output_size,))]`.
@@ -62,21 +62,21 @@ python dp_playground.py --steps 200000 --batch_size 1 \
        --lambda_real_interval -1 -1 --lambda_imag_interval 0 0
 ```
 
-## Evaluation
+### Evaluation
 
-### Using Training Script for Evaluation Only
+#### Using Training Script for Evaluation Only
 
 Simply set the number of training steps to 0 (`--steps 0`) – the
 (possibly loaded) model will be used as is.
 
-## Sharing Models
+### Sharing Models
 
 The files to share when sharing a model for continued training are
 those ending in `.npy`, `.structure` and `.steps`. When only
 interested in interference, the file ending in `.steps` does not need
 to be shared.
 
-# Reinforcement Learning
+## Reinforcement Learning
 
 The main script is [./rl_playground.py](./rl_playground.py). For
 command line arguments, see
@@ -89,7 +89,7 @@ script as a timestamp, so all files for one experiment should be
 immediately recognizable by having the same timestamp (except for
 TensorBoard logs for now).
 
-## Recommended arguments
+### Recommended arguments
 
 ```shell
 python rl_playground.py --envname sdc-v1 --num_envs 8 \
@@ -97,7 +97,7 @@ python rl_playground.py --envname sdc-v1 --num_envs 8 \
        --collect_states True --reward_iteration_only False --norm_obs True
 ```
 
-## Another recommendation
+### Another recommendation
 
 To accelerate learning, increase the batch size if possible. Here is
 an example for PPG:
