@@ -322,7 +322,7 @@ def build_model(args, train):
     elif args.prec_type == 'lower_tri':
         output_size = args.M * 2
     elif args.prec_type == 'strictly_lower_tri':
-        output_size = (args.M - 1 * args.M) // 2
+        output_size = ((args.M - 1) * args.M) // 2
     else:
         raise UnknownPrecTypeError()
 
