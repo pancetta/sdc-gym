@@ -594,6 +594,10 @@ def main():
     script_start = str(datetime.datetime.now()
                        ).replace(':', '-').replace(' ', 'T')
     args = parse_args()
+    # Eigenvalue decomposition for our case currently not implemented
+    # on GPU.
+    # See https://github.com/google/jax/issues/1259
+    jax.config.update('jax_platform_name', 'cpu')
     jax.config.update('jax_enable_x64', args.float64)
     utils.setup(True)
 
