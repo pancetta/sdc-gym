@@ -314,17 +314,22 @@ def _from_model_arch(model_arch, train):
     return (model_init, model_apply)
 
 
-def build_model(args, train):
-    if args.prec_type == 'diag':
-        output_size = args.M
-    elif args.prec_type == 'lower_diag':
-        output_size = args.M - 1
-    elif args.prec_type == 'lower_tri':
-        output_size = (args.M * (args.M + 1)) // 2
-    elif args.prec_type == 'strictly_lower_tri':
-        output_size = ((args.M - 1) * args.M) // 2
+def get_output_size(M, prec_type):
+    if prec_type == 'diag':
+        output_size = M
+    elif prec_type == 'lower_diag':
+        output_size = M - 1
+    elif prec_type == 'lower_tri':
+        output_size = (M * (M + 1)) // 2
+    elif prec_type == 'strictly_lower_tri':
+        output_size = ((M - 1) * M) // 2
     else:
         raise UnknownPrecTypeError()
+    return output_size
+
+
+def build_model(args, train):
+    output_size = get_output_size(args.M, args.prec_type)
 
     # 12 (or more) hidden layers give good results sometimes.
     #
