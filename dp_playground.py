@@ -320,7 +320,7 @@ def build_model(args, train):
     elif args.prec_type == 'lower_diag':
         output_size = args.M - 1
     elif args.prec_type == 'lower_tri':
-        output_size = args.M * 2
+        output_size = (args.M * (args.M + 1)) // 2
     elif args.prec_type == 'strictly_lower_tri':
         output_size = ((args.M - 1) * args.M) // 2
     else:
