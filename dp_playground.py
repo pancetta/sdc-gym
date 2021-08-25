@@ -1,5 +1,6 @@
 import argparse
 import datetime
+import functools
 from pathlib import Path
 import time
 
@@ -55,21 +56,26 @@ class DataGenerator:
         self.lam_imag_low = self.lambda_imag_interval[0]
         self.lam_imag_high = self.lambda_imag_interval[1]
 
-    def _generate_lambdas(self):
-        self.rng_key, subkey, subkey2 = jax.random.split(self.rng_key, 3)
+    @functools.partial(jax.jit, static_argnums=(0,))
+    def _generate_lambdas(self, rng_key):
+        rng_keys = jax.random.split(rng_key, 3)
         lams = (
-            1 * jax.random.uniform(subkey, (self.batch_size, 1),
+            1 * jax.random.uniform(rng_keys[1], (self.batch_size, 1),
                                    minval=self.lam_real_low,
                                    maxval=self.lam_real_high)
-            + 1j * jax.random.uniform(subkey2, (self.batch_size, 1),
+            + 1j * jax.random.uniform(rng_keys[2], (self.batch_size, 1),
                                       minval=self.lam_imag_low,
                                       maxval=self.lam_imag_high)
         )
+        return lams, rng_keys[0]
+
+    def generate_lambdas(self):
+        lams, self.rng_key = self._generate_lambdas(self.rng_key)
         return lams
 
     def __iter__(self):
         while True:
-            lams = self._generate_lambdas()
+            lams = self.generate_lambdas()
             yield lams
 
 
