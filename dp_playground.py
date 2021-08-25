@@ -579,6 +579,7 @@ def run_tests(model, params, args,
         path = model
         params, model_arch, _ = load_model(path)
         _, model = _from_model_arch(model_arch, train=False)
+        params = list(params)
 
     model = jax.jit(model)
 
