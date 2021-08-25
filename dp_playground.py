@@ -466,6 +466,21 @@ def delete_model(path):
     path.with_name(path.name + '.steps').unlink(missing_ok=True)
 
 
+def check_output_size(args, model, params):
+    test_out = model(
+        params,
+        jnp.zeros((1, 1), dtype=float),
+        rng=jax.random.PRNGKey(0),
+    )
+    expected_output_size = get_output_size(args.M, args.prec_type)
+    assert test_out.size == expected_output_size, (
+        f'Output size of the model on an example input does '
+        f'not match expected size '
+        f'({test_out.size} != {expected_output_size}). '
+        f'Possibly the `prec_type` needs to be adjusted?'
+    )
+
+
 # def load_model(path):
 #     with open(path, 'rb') as f:
 #         cp = jnp.load(f)
@@ -580,6 +595,7 @@ def run_tests(model, params, args,
         params, model_arch, _ = load_model(path)
         _, model = _from_model_arch(model_arch, train=False)
         params = list(params)
+        check_output_size(args, model, params)
 
     model = jax.jit(model)
 
@@ -710,6 +726,7 @@ def main():
         params, model_arch, old_steps = load_model(args.model_path)
         _, model = _from_model_arch(model_arch, train=True)
         params = list(params)
+        check_output_size(args, model, params)
     else:
         old_steps = 0
 
@@ -805,6 +822,7 @@ def main():
         params, _, _ = load_model(load_cp_path)
         print(f'Testing model at {load_cp_path}.')
         params = list(params)
+        check_output_size(args, model, params)
     fig_path = Path(f'dp_results_{script_start}.pdf')
     run_tests(
         model,
