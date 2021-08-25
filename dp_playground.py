@@ -243,6 +243,7 @@ def parse_args():
 
     args.lambda_real_interval = sorted(args.lambda_real_interval)
     args.lambda_imag_interval = sorted(args.lambda_imag_interval)
+    args.prec_type = args.prec_type.lower()
 
     # Dummy values
     args.lambda_real_interpolation_interval = None
