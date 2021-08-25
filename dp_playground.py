@@ -344,7 +344,9 @@ class CosineLR:
         )
 
 
-def build_opt(lr, params, old_steps):
+def build_opt(args, params, old_steps):
+    lr = args.learning_rate
+
     # lr = optimizers.polynomial_decay(lr, 15000, lr * 1e-7, 2.0)
     # lr = optimizers.polynomial_decay(2 * lr, 50000, lr * 2e-9, 2.0)
     # lr = optax.cosine_onecycle_schedule(19000, 2e2 * lr, 0.3, 2e9)
@@ -629,7 +631,7 @@ def main():
         old_steps = 0
 
     opt_state, opt_update, opt_get_params = build_opt(
-        args.learning_rate, params, old_steps)
+        args, params, old_steps)
     loss_func = NormLoss(args.M, args.dt)
 
     max_grad_norm = 0.5
