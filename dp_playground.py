@@ -501,6 +501,10 @@ def check_output_size(args, model, params):
 #         jnp.savez(f, opt_state=opt_state, steps=steps)
 
 
+def get_obs(env):
+    return jnp.array([env_.lam for env_ in env.envs]).reshape(-1, 1)
+
+
 def test_model(model, params, rng_key, env, ntests, name,
                loss_func=None, stats_path=None):
     """Test the `model` in the Gym `env` `ntests` times.
@@ -532,7 +536,7 @@ def test_model(model, params, rng_key, env, ntests, name,
 
     for i in range(ntests):
         env.reset()
-        obs = jnp.array([env_.lam for env_ in env.envs]).reshape(-1, 1)
+        obs = get_obs(env)
         done = [False for _ in range(num_envs)]
         if env.envs[0].prec is not None:
             action = [np.empty(env.action_space.shape,
@@ -553,7 +557,7 @@ def test_model(model, params, rng_key, env, ntests, name,
                 action = np.array(action)
 
             _, rewards, done, info = env.step(action)
-            obs = jnp.array([env_.lam for env_ in env.envs]).reshape(-1, 1)
+            obs = get_obs(env)
 
             if stats_path is not None:
                 stats['action'].append(action)
