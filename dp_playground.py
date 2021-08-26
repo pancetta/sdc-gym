@@ -109,14 +109,17 @@ class SpectralRadiusLoss:
             raise UnknownPrecTypeError()
         return Qdmat
 
+    def compute_pinv(self, lam, Qdmat):
+        # Compute the inverse of P
+        Pinv = jnp.linalg.inv(
+            jnp.eye(self.M) - lam * self.dt * Qdmat,
+        )
+        return Pinv
+
     def _get_spectral_radius(self, lam, output):
         Qdmat = self.get_qdmat(output)
 
-        # Precompute the inverse of P
-        Pinv = jnp.linalg.inv(
-            jnp.eye(self.M)
-            - lam * self.dt * Qdmat
-        )
+        Pinv = self.compute_pinv(lam, Qdmat)
         mPinv = jnp.dot(Pinv, self.Q - Qdmat)
         # print(mPinv)
         evals = jnp.linalg.eigvals(lam * self.dt * mPinv)
