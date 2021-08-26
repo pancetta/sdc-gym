@@ -94,7 +94,7 @@ class NormLoss:
         self.dt = dt
         self.prec_type = prec_type
 
-    def _get_spectral_radius(self, lam, output):
+    def get_qdmat(self, output):
         if self.prec_type == 'diag':
             Qdmat = jnp.diag(output)
         elif self.prec_type == 'lower_diag':
@@ -107,6 +107,10 @@ class NormLoss:
             Qdmat = Qdmat.at[jnp.tril_indices(self.M, k=-1)].set(output)
         else:
             raise UnknownPrecTypeError()
+        return Qdmat
+
+    def _get_spectral_radius(self, lam, output):
+        Qdmat = self.get_qdmat(output)
 
         # Precompute the inverse of P
         Pinv = jnp.linalg.inv(
