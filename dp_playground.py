@@ -86,7 +86,7 @@ class DataGenerator:
             yield lams
 
 
-class NormLoss:
+class SpectralRadiusLoss:
     def __init__(self, M, dt, prec_type):
         coll = CollGaussRadau_Right(M, 0, 1)
         self.Q = jnp.array(coll.Qmat[1:, 1:])
@@ -129,6 +129,8 @@ class NormLoss:
 
     def __call__(self, lams, outputs):
         return jnp.mean(jax.vmap(self._get_spectral_radius)(lams, outputs))
+
+NormLoss = SpectralRadiusLoss  # Backward compatibility
 
 
 def parse_args():
@@ -736,7 +738,7 @@ def main():
 
     opt_state, opt_update, opt_get_params = build_opt(
         args, params, old_steps)
-    loss_func = NormLoss(args.M, args.dt, args.prec_type)
+    loss_func = SpectralRadiusLoss(args.M, args.dt, args.prec_type)
 
     max_grad_norm = 0.5
     # grad_clipping_schedule = optimizers.polynomial_decay(
