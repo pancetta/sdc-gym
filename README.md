@@ -40,25 +40,24 @@ python dp_playground.py --M 5 --steps 200000 --batch_size 32 \
 
 #### Optimizing Parameters Directly
 
-To obtain a model that optimizes M parameters directly, you would, in
-`build_model`, set `model_arch = [('Params', (output_size,))]`.
+To obtain a model that optimizes the preconditioner's parameters
+directly, you would give the argument `--optimize_directly True`.
 
 An example training to optimize for a single λ value with M = 5 would
-be started like this (after applying the above adjustment to the
-`build_model` function). Note also that we set the batch size to 1 to
+be started like this. Note also that we set the batch size to 1 to
 avoid redundant work:
 
 ```shell
-python dp_playground.py --M 5 --steps 200000 --batch_size 1 \
-       --lambda_real_interval -1 -1 --lambda_imag_interval 0 0
+python dp_playground.py --M 5 --steps 200000 --optimize_directly True \
+       --batch_size 1 --lambda_real_interval -1 -1 --lambda_imag_interval 0 0
 ```
 
 To optimize a strictly lower triangular preconditioner, testing on
 some additional preconditioners:
 
 ```shell
-python dp_playground.py --steps 200000 --batch_size 1 \
-       --prec_type strictly_lower_tri --extensive_tests True \
+python dp_playground.py --steps 200000 --optimize_directly True \
+       --batch_size 1 --prec_type strictly_lower_tri --extensive_tests True \
        --lambda_real_interval -1 -1 --lambda_imag_interval 0 0
 ```
 
