@@ -310,6 +310,17 @@ def parse_args():
         default=0,
         help='Base random number seed.',
     )
+    parser.add_argument(
+        '--envname',
+        type=str,
+        default=None,
+        help=(
+            'Gym environment to use;\n    sdc-v0 – SDC with a full iteration '
+            'per step (no intermediate observations),\n    sdc-v1 – SDC with '
+            'a single iteration per step (with intermediate observations).\n'
+            'By default, choose based on other options.'
+        ),
+    )
 
     parser.add_argument(
         '--float64',
@@ -357,7 +368,11 @@ def parse_args():
     )
 
     args = parser.parse_args()
-    args.envname = 'sdc-v0'
+    if args.envname is None:
+        if args.input_type != '' and args.loss_type == 'residual':
+            args.envname = 'sdc-v1'
+        else:
+            args.envname = 'sdc-v0'
 
     args.lambda_real_interval = sorted(args.lambda_real_interval)
     args.lambda_imag_interval = sorted(args.lambda_imag_interval)
@@ -763,6 +778,7 @@ def run_tests(model, params, args,
     ntests = int(args.tests)
     ntests = utils.maybe_fix_ntests(ntests, num_test_envs)
 
+    old_envname = args.envname
     start_time = time.perf_counter()
     # Test the trained model.
     env = utils.make_env(args, num_envs=num_test_envs, seed=seed,
@@ -772,6 +788,7 @@ def run_tests(model, params, args,
         model, params, input_type, rng_key, env, ntests, 'RL', loss_func,
         stats_path=stats_path)
 
+    args.envname = 'sdc-v0'
     # Restart the whole thing, but now using the LU preconditioner (no RL here)
     # LU is serial and the de-facto standard. Beat this (or at least be on par)
     # and we win!
@@ -826,6 +843,7 @@ def run_tests(model, params, args,
 
     duration = time.perf_counter() - start_time
     print(f'Testing took {duration} seconds.')
+    args.envname = old_envname
 
     # Plot all three iteration counts over the lambda values
     plt.xlabel('re(λ)')
