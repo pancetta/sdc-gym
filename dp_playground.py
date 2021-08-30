@@ -1043,7 +1043,7 @@ def main():
                 delete_model(prev_best_cp_path)
 
             print(f'[{step:>{steps_num_digits}d}/{steps}] '
-                  f'mean_loss: {mean_loss:.5f}')
+                  f'mean_loss: {mean_loss:.10f}')
 
         if step >= steps:
             break
