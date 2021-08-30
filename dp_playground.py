@@ -53,6 +53,10 @@ class UnknownLossTypeError(NotImplementedError):
         super().__init__(message, *args, **kwargs)
 
 
+def _compute_residual(u0, u, C):
+    return u0 - C @ u
+
+
 class DataGenerator:
     def __init__(
             self,
@@ -105,9 +109,6 @@ class DataGenerator:
 
     def _compute_system_matrix(self,lam):
         return jnp.eye(self.M) - lam * self.dt * self.Q
-
-    def _compute_residual(self, u0, u, C):
-        return u0 - C @ u
 
     def _generate_us(self, rng_key):
         rng_keys = jax.random.split(rng_key, 3)
