@@ -221,7 +221,7 @@ class ResidualLoss:
         return jnp.linalg.norm(v, jnp.inf)
 
     def take_step(self, C, lam, output, u, old_residual):
-        Qdmat = SpectralRadiusLoss.get_qdmat(self, lam, output)
+        Qdmat = SpectralRadiusLoss.get_qdmat(self, output)
         Pinv = SpectralRadiusLoss.compute_pinv(self, lam, Qdmat)
         u = u + Pinv @ old_residual
         residual = _compute_residual(self.u0, u, C)
