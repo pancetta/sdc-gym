@@ -46,6 +46,13 @@ class UnknownInputTypeError(NotImplementedError):
         super().__init__(message, *args, **kwargs)
 
 
+class UnknownLossTypeError(NotImplementedError):
+    def __init__(self, message=None, *args, **kwargs):
+        if message is None:
+            message = 'unknown `loss_type` (check your arguments)'
+        super().__init__(message, *args, **kwargs)
+
+
 class DataGenerator:
     def __init__(
             self,
@@ -54,6 +61,7 @@ class DataGenerator:
             lambda_imag_interval,
             batch_size,
             input_type,
+            loss_type,
             rng_key,
     ):
         super().__init__()
@@ -64,6 +72,7 @@ class DataGenerator:
         self.lambda_imag_interval = lambda_imag_interval
         self.batch_size = batch_size
         self.input_type = input_type
+        self.loss_type = loss_type
         self.rng_key = rng_key
 
         self.lam_real_low = self.lambda_real_interval[0]
@@ -106,12 +115,19 @@ class DataGenerator:
     def _generate_inputs(self, rng_key):
         lams, rng_key = self._generate_lambdas(rng_key)
         # Stop early if we don't need other data.
-        if self.input_type == 'lambda':
-            return lams, (), rng_key
+        if self.input_type == 'lambda' and self.loss_type == 'spectral_radius':
+            return lams, (), (), rng_key
 
         Cs = jax.vmap(self._compute_system_matrix)(lam)
         us, rng_key = self._generate_us(rng_key)
         residuals = jax.vmap(self._compute_residual)
+
+        if self.loss_type == 'spectral_radius':
+            loss_data = ()
+        elif self.loss_type == 'residual':
+            loss_data = (Cs, us, residuals)
+        else:
+            raise UnknownLossTypeError()
 
         if self.input_type == 'lambda':
             input_data = ()
@@ -122,11 +138,11 @@ class DataGenerator:
         else:
             raise UnknownInputTypeError()
 
-        return lams, input_data, rng_key
+        return lams, input_data, loss_data, rng_key
 
     def generate_inputs(self):
-        lams, input_data, self.rng_key = self._generate_inputs(self.rng_key)
-        return lams, input_data
+        lams, input_data, loss_data, self.rng_key = self._generate_inputs(self.rng_key)
+        return lams, input_data, loss_data
 
     def __iter__(self):
         while True:
@@ -182,6 +198,32 @@ class SpectralRadiusLoss:
         return jnp.mean(jax.vmap(self._get_spectral_radius)(lams, outputs))
 
 NormLoss = SpectralRadiusLoss  # Backward compatibility
+
+
+class ResidualLoss:
+    def __init__(self, M, dt, prec_type):
+        coll = CollGaussRadau_Right(M, 0, 1)
+        self.Q = jnp.array(coll.Qmat[1:, 1:])
+        self.M = M
+        self.dt = dt
+        self.u0 = jnp.ones(M, dtype=complex)
+        self.prec_type = prec_type
+
+    def _inf_norm(self, v):
+        return jnp.linalg.norm(v, jnp.inf)
+
+    def take_step(self, C, lam, output, u, old_residual):
+        Qdmat = SpectralRadiusLoss.get_qdmat(self, lam, output)
+        Pinv = SpectralRadiusLoss.compute_pinv(self, lam, Qdmat)
+        u = u + Pinv @ old_residual
+        residual = _compute_residual(self.u0, u, C)
+        return (u, residual)
+
+    def __call__(self, lams, outputs, Cs, us, old_residuals):
+        us, residuals = jax.vmap(self.take_step)(
+            Cs, lams, outputs, us, old_residuals)
+        residual_norms = jax.vmap(self._inf_norm)(residuals)
+        return (jnp.mean(residual_norms), us, residuals)
 
 
 def parse_args():
@@ -295,6 +337,16 @@ def parse_args():
         ),
     )
     parser.add_argument(
+        '--loss_type',
+        type=str,
+        default='spectral_radius',
+        help=(
+            'Loss function to use for training. Valid values '
+            'include "spectral_radius" (spectral radius of iteration matrix), '
+            'and "residual" (residual after one iteration step).'
+        ),
+    )
+    parser.add_argument(
         '--extensive_tests',
         type=utils.parse_bool,
         default=False,
@@ -311,6 +363,7 @@ def parse_args():
     args.lambda_imag_interval = sorted(args.lambda_imag_interval)
     args.prec_type = args.prec_type.lower()
     args.input_type = args.input_type.lower()
+    args.loss_type = args.loss_type.lower()
 
     # Dummy values
     args.lambda_real_interpolation_interval = None
@@ -543,6 +596,16 @@ def delete_model(path):
     path.unlink(missing_ok=True)
     path.with_name(path.name + '.structure').unlink(missing_ok=True)
     path.with_name(path.name + '.steps').unlink(missing_ok=True)
+
+
+def get_loss_func(M, dt, prec_type, loss_type):
+    if loss_type == 'spectral_radius':
+        loss_func = SpectralRadiusLoss(M, dt, prec_type)
+    elif loss_type == 'residual':
+        loss_func = ResidualLoss(M, dt, prec_type)
+    else:
+        raise UnknownLossTypeError()
+    return loss_func
 
 
 def check_output_size(args, model, params):
@@ -786,8 +849,8 @@ def get_cp_name(args, script_start):
     re_interval = '_'.join(map(str, args.lambda_real_interval))
     im_interval = '_'.join(map(str, args.lambda_imag_interval))
     return (
-        f'dp_model_prec_{args.prec_type}_input_{args.prec_type}_'
-        f'M_{args.M}_re_{re_interval}_im_{im_interval}_'
+        f'dp_model_prec_{args.prec_type}_input_{args.input_type}_'
+        f'lossf_{args.loss_type}_M_{args.M}_re_{re_interval}_im_{im_interval}_'
         f'loss_{{}}_{script_start}.npy'
     )
 
@@ -796,10 +859,11 @@ def main():
     script_start = str(datetime.datetime.now()
                        ).replace(':', '-').replace(' ', 'T')
     args = parse_args()
-    # Eigenvalue decomposition for our case currently not implemented
-    # on GPU.
-    # See https://github.com/google/jax/issues/1259
-    jax.config.update('jax_platform_name', 'cpu')
+    if args.loss_type == 'spectral_radius':
+        # Eigenvalue decomposition for our case currently not implemented
+        # on GPU.
+        # See https://github.com/google/jax/issues/1259
+        jax.config.update('jax_platform_name', 'cpu')
     jax.config.update('jax_enable_x64', args.float64)
     utils.setup(True)
 
@@ -816,6 +880,7 @@ def main():
         args.lambda_imag_interval,
         args.batch_size,
         args.input_type,
+        args.loss_type,
         subkey,
     )
 
@@ -834,7 +899,7 @@ def main():
 
     opt_state, opt_update, opt_get_params = build_opt(
         args, params, old_steps)
-    loss_func = SpectralRadiusLoss(args.M, args.dt, args.prec_type)
+    loss_func = get_loss_func(args.M, args.dt, args.prec_type, args.loss_type)
 
     max_grad_norm = 0.5
     # grad_clipping_schedule = optimizers.polynomial_decay(
@@ -846,7 +911,7 @@ def main():
         weight_decay_factor, 15000, 0.0, 2.0)
 
     # @jax.jit
-    def loss(params, lams, i, input_data, rng_key):
+    def loss(params, lams, i, input_data, loss_data, rng_key):
         if args.input_type == 'lambda':
             outputs = model(params, lams, rng=rng_key)
         elif args.input_type == 'residual':
@@ -858,22 +923,35 @@ def main():
         else:
             raise UnknownInputTypeError()
 
-        loss_ = loss_func(lams, outputs)
+        if args.loss_type == 'spectral_radius':
+            loss_ = loss_func(lams, outputs)
+            aux_data = ()
+        elif args.loss_type == 'residual':
+            Cs, us, residuals = loss_data
+            loss_, us, residuals = loss_func(lams, outputs, Cs, us, residuals)
+            aux_data = (us, residuals)
+        else:
+            raise UnknownLossTypeError()
+
         weight_penalty = optimizers.l2_norm(params)
         weight_decay_factor = weight_decay_schedule(i)
-        return loss_ + weight_decay_factor * weight_penalty
+        loss_ = loss_ + weight_decay_factor * weight_penalty
+        return loss_, aux_data
 
     @jax.jit
-    def update(i, opt_state, lams, input_data, rng_key):
+    def update(i, opt_state, lams, input_data, loss_data, rng_key):
         params = opt_get_params(opt_state)
         rng_key, subkey = jax.random.split(rng_key)
-        loss_, gradient = jax.value_and_grad(loss)(
-            params, lams, i.astype(float), input_data, subkey)
+        (loss_, aux_data), gradient = jax.value_and_grad(
+            loss,
+            has_aux=True,
+        )(params, lams, i.astype(float), input_data, loss_data, subkey)
+
         # print(gradient)
         # max_grad_norm = grad_clipping_schedule(i)
         gradient = optimizers.clip_grads(gradient, max_grad_norm)
         opt_state = opt_update(i, gradient, opt_state)
-        return loss_, opt_state, rng_key
+        return loss_, opt_state, aux_data, rng_key
 
     steps = int(args.steps)
     steps_num_digits = len(str(steps))
@@ -885,9 +963,15 @@ def main():
     best_loss = np.inf
     last_losses = np.zeros(100)
     start_time = time.perf_counter()
-    for (step, (lams, input_data)) in enumerate(dataloader):
-        loss_, opt_state, rng_key = update(
-            jnp.array(step + old_steps), opt_state, lams, input_data, rng_key)
+    for (step, (lams, input_data, loss_data)) in enumerate(dataloader):
+        loss_, opt_state, aux_data, rng_key = update(
+            jnp.array(step + old_steps),
+            opt_state,
+            lams,
+            input_data,
+            loss_data,
+            rng_key,
+        )
 
         last_losses[step % len(last_losses)] = loss_.item()
 
