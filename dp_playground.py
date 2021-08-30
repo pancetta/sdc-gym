@@ -59,6 +59,8 @@ class DataGenerator:
             M,
             lambda_real_interval,
             lambda_imag_interval,
+            u_real_interval,
+            u_imag_interval,
             batch_size,
             input_type,
             loss_type,
@@ -70,6 +72,8 @@ class DataGenerator:
         self.Q = self.coll.Qmat[1:, 1:]
         self.lambda_real_interval = lambda_real_interval
         self.lambda_imag_interval = lambda_imag_interval
+        self.u_real_interval = u_real_interval
+        self.u_imag_interval = u_imag_interval
         self.batch_size = batch_size
         self.input_type = input_type
         self.loss_type = loss_type
@@ -77,9 +81,13 @@ class DataGenerator:
 
         self.lam_real_low = self.lambda_real_interval[0]
         self.lam_real_high = self.lambda_real_interval[1]
-
         self.lam_imag_low = self.lambda_imag_interval[0]
         self.lam_imag_high = self.lambda_imag_interval[1]
+
+        self.u_real_low = self.u_real_interval[0]
+        self.u_real_high = self.u_real_interval[1]
+        self.u_imag_low = self.u_imag_interval[0]
+        self.u_imag_high = self.u_imag_interval[1]
 
     def _generate_lambdas(self, rng_key):
         rng_keys = jax.random.split(rng_key, 3)
@@ -278,6 +286,20 @@ def parse_args():
         default=[0.0, 0.0],
         help='Interval to sample the imaginary part of lambda from.',
     )
+    parser.add_argument(
+        '--u_real_interval',
+        type=float,
+        nargs=2,
+        default=[1.0, 1.0],
+        help='Interval to sample the real part of u from.',
+    )
+    parser.add_argument(
+        '--u_imag_interval',
+        type=float,
+        nargs=2,
+        default=[0.0, 0.0],
+        help='Interval to sample the imaginary part of u from.',
+    )
 
     parser.add_argument(
         '--learning_rate',
@@ -376,6 +398,8 @@ def parse_args():
 
     args.lambda_real_interval = sorted(args.lambda_real_interval)
     args.lambda_imag_interval = sorted(args.lambda_imag_interval)
+    args.u_real_interval = sorted(args.u_real_interval)
+    args.u_imag_interval = sorted(args.u_imag_interval)
     args.prec_type = args.prec_type.lower()
     args.input_type = args.input_type.lower()
     args.loss_type = args.loss_type.lower()
@@ -864,11 +888,15 @@ def run_tests(model, params, args,
 
 
 def get_cp_name(args, script_start):
-    re_interval = '_'.join(map(str, args.lambda_real_interval))
-    im_interval = '_'.join(map(str, args.lambda_imag_interval))
+    lam_re_interval = '_'.join(map(str, args.lambda_real_interval))
+    lam_im_interval = '_'.join(map(str, args.lambda_imag_interval))
+    u_re_interval = '_'.join(map(str, args.u_real_interval))
+    u_im_interval = '_'.join(map(str, args.u_imag_interval))
     return (
         f'dp_model_prec_{args.prec_type}_input_{args.input_type}_'
-        f'lossf_{args.loss_type}_M_{args.M}_re_{re_interval}_im_{im_interval}_'
+        f'lossf_{args.loss_type}_M_{args.M}_'
+        f'lambda_re_{lam_re_interval}_im_{lam_im_interval}_'
+        f'u_re_{u_re_interval}_im_{u_im_interval}_'
         f'loss_{{}}_{script_start}.npy'
     )
 
