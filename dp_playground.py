@@ -351,6 +351,15 @@ def parse_args():
         default=32,
         help='Number of samples for each training step',
     )
+    parser.add_argument(
+        '--optimize_directly',
+        type=utils.parse_bool,
+        default=False,
+        help=(
+            'Whether to optimize the preconditioner directly, '
+            'foregoing a neural network.'
+        ),
+    )
 
     parser.add_argument(
         '--model_path',
@@ -542,25 +551,27 @@ def get_output_size(M, prec_type):
 def build_model(args, train):
     output_size = get_output_size(args.M, args.prec_type)
 
-    # 12 (or more) hidden layers give good results sometimes.
-    #
-    # For very large intervals in both real and imaginary space, weird
-    # architectures like 3 hidden layers with 2 neurons may work as well
-    # as 3 hidden layers with 512 neurons. However, those results can
-    # probably be improved.
-    model_arch = [
-        ('Dense', (128,)),
-        ('Dropout', ()),
-        ('Relu',),
-        ('Dense', (128,)),
-        ('Relu',),
-        ('Dense', (128,)),
-        ('Dropout', ()),
-        ('Relu',),
-        ('Dense', (output_size,)),
-        # ('Real',),
-        # ('Params', (output_size,)),
-    ]
+    if args.optimize_directly:
+        model_arch = [('Params', (output_size,))]
+    else:
+        # 12 (or more) hidden layers give good results sometimes.
+        #
+        # For very large intervals in both real and imaginary space, weird
+        # architectures like 3 hidden layers with 2 neurons may work as well
+        # as 3 hidden layers with 512 neurons. However, those results can
+        # probably be improved.
+        model_arch = [
+            ('Dense', (128,)),
+            # ('Dropout', ()),
+            ('Relu',),
+            # ('Dense', (128,)),
+            # ('Relu',),
+            ('Dense', (128,)),
+            # ('Dropout', ()),
+            ('Relu',),
+            ('Dense', (output_size,)),
+            # ('Real',),
+        ]
 
     (model_init, model_apply) = _from_model_arch(model_arch, train=train)
 
