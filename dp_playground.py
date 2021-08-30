@@ -438,7 +438,7 @@ def parse_args():
 
     args = parser.parse_args()
     if args.envname is None:
-        if args.input_type != '' and args.loss_type == 'residual':
+        if args.input_type != 'lambda' and args.loss_type == 'residual':
             args.envname = 'sdc-v1'
         else:
             args.envname = 'sdc-v0'
