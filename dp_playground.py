@@ -924,6 +924,8 @@ def main():
         args.M,
         args.lambda_real_interval,
         args.lambda_imag_interval,
+        args.u_real_interval,
+        args.u_imag_interval,
         args.batch_size,
         args.input_type,
         args.loss_type,
