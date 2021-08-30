@@ -37,6 +37,46 @@ python dp_playground.py --M 5 --steps 200000 --batch_size 32 \
        --model_path best_dp_model_diag_M_5_re_-100.0_0.0_im_-10.0_0.0_loss_[...].npy
 ```
 
+#### Preconditioner, Input, and Loss Types
+
+The structure of the preconditioner, the model's input as well as the
+loss function used for training may be changed with their
+corresponding arguments. We will describe each of them in detail here.
+
+##### Preconditioners
+
+The `--prec_type` argument specifies which preconditioner to use. All
+nonzero values of the resulting matrix will be optimized. The default
+is `diag`.
+
+| `prec_type`        | Description                                                 |
+|--------------------|-------------------------------------------------------------|
+| diag               | Diagonal matrix                                             |
+| lower_diag         | Diagonal matrix with the diagonal lowered by an offset of 1 |
+| lower_tri          | Lower triangular matrix                                     |
+| strictly_lower_tri | Strictly lower triangular matrix                            |
+
+##### Inputs
+
+The `--input_type` argument specifies which inputs to give the model.
+The default is `lambda`.
+
+| `input_type` | Description                                               |
+|--------------|-----------------------------------------------------------|
+| lambda       | Only λ                                                    |
+| residual     | Initial residual (of the initial guess in relation to u0) |
+| lambda_u     | λ and the initial guess                                   |
+
+##### Losses
+
+The `--loss_type` argument specifies which loss function to use for
+training the model. The default is `spectral_radius`.
+
+| `loss_type`     | Description                                          |
+|-----------------|------------------------------------------------------|
+| spectral_radius | Minimize the spectral radius of the iteration matrix |
+| residual        | Minimize the residual after one iteration step       |
+
 #### Optimizing Parameters Directly
 
 To obtain a model that optimizes the preconditioner's parameters
