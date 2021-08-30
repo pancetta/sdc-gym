@@ -131,12 +131,13 @@ class DataGenerator:
 
         Cs = jax.vmap(self._compute_system_matrix)(lams)
         us, rng_key = self._generate_us(rng_key)
-        residuals = jax.vmap(_compute_residual)(us, us, Cs)
+        u0s = us
+        residuals = jax.vmap(_compute_residual)(u0s, us, Cs)
 
         if self.loss_type == 'spectral_radius':
             loss_data = ()
         elif self.loss_type == 'residual':
-            loss_data = (Cs, us, residuals)
+            loss_data = (Cs, u0s, us, residuals)
         else:
             raise UnknownLossTypeError()
 
@@ -217,22 +218,21 @@ class ResidualLoss:
         self.Q = jnp.array(coll.Qmat[1:, 1:])
         self.M = M
         self.dt = dt
-        self.u0 = jnp.ones(M, dtype=complex)
         self.prec_type = prec_type
 
     def _inf_norm(self, v):
         return jnp.linalg.norm(v, jnp.inf)
 
-    def take_step(self, C, lam, output, u, old_residual):
+    def take_step(self, C, u0, lam, output, u, old_residual):
         Qdmat = SpectralRadiusLoss.get_qdmat(self, output)
         Pinv = SpectralRadiusLoss.compute_pinv(self, lam, Qdmat)
         u = u + Pinv @ old_residual
-        residual = _compute_residual(self.u0, u, C)
+        residual = _compute_residual(u0, u, C)
         return (u, residual)
 
-    def __call__(self, lams, outputs, Cs, us, old_residuals):
+    def __call__(self, lams, outputs, Cs, u0s, us, old_residuals):
         us, residuals = jax.vmap(self.take_step)(
-            Cs, lams, outputs, us, old_residuals)
+            Cs, u0s, lams, outputs, us, old_residuals)
         residual_norms = jax.vmap(self._inf_norm)(residuals)
         return (jnp.mean(residual_norms), us, residuals)
 
@@ -980,8 +980,9 @@ def main():
             loss_ = loss_func(lams, outputs)
             aux_data = ()
         elif args.loss_type == 'residual':
-            Cs, us, residuals = loss_data
-            loss_, us, residuals = loss_func(lams, outputs, Cs, us, residuals)
+            Cs, u0s, us, residuals = loss_data
+            loss_, us, residuals = loss_func(
+                lams, outputs, Cs, u0s, us, residuals)
             aux_data = (us, residuals)
         else:
             raise UnknownLossTypeError()
