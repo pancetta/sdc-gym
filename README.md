@@ -2,9 +2,8 @@
 
 ## Differentiable Programming RL
 
-The main script is [./dp_playground.py](./dp_playground.py) or its
-variants. For command line arguments, see the according `parse_args`
-function.
+The main script is [./dp_playground.py](./dp_playground.py). For
+command line arguments, see the according `parse_args` function.
 
 Modify the `build_model` function according to the desired
 architecture. Adjusting the learning rate schedule in the `build_opt`
