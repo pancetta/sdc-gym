@@ -57,6 +57,7 @@ class DataGenerator:
     def __init__(
             self,
             M,
+            dt,
             lambda_real_interval,
             lambda_imag_interval,
             u_real_interval,
@@ -68,6 +69,7 @@ class DataGenerator:
     ):
         super().__init__()
         self.M = M
+        self.dt = dt
         self.coll = CollGaussRadau_Right(M, 0, 1)
         self.Q = self.coll.Qmat[1:, 1:]
         self.lambda_real_interval = lambda_real_interval
@@ -922,6 +924,7 @@ def main():
 
     dataloader = DataGenerator(
         args.M,
+        args.dt,
         args.lambda_real_interval,
         args.lambda_imag_interval,
         args.u_real_interval,
