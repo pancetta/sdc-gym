@@ -39,6 +39,13 @@ class UnknownPrecTypeError(NotImplementedError):
         super().__init__(message, *args, **kwargs)
 
 
+class UnknownInputTypeError(NotImplementedError):
+    def __init__(self, message=None, *args, **kwargs):
+        if message is None:
+            message = 'unknown `input_type` (check your arguments)'
+        super().__init__(message, *args, **kwargs)
+
+
 class DataGenerator:
     def __init__(
             self,
@@ -46,6 +53,7 @@ class DataGenerator:
             lambda_real_interval,
             lambda_imag_interval,
             batch_size,
+            input_type,
             rng_key,
     ):
         super().__init__()
@@ -55,6 +63,7 @@ class DataGenerator:
         self.lambda_real_interval = lambda_real_interval
         self.lambda_imag_interval = lambda_imag_interval
         self.batch_size = batch_size
+        self.input_type = input_type
         self.rng_key = rng_key
 
         self.lam_real_low = self.lambda_real_interval[0]
@@ -63,7 +72,6 @@ class DataGenerator:
         self.lam_imag_low = self.lambda_imag_interval[0]
         self.lam_imag_high = self.lambda_imag_interval[1]
 
-    @functools.partial(jax.jit, static_argnums=(0,))
     def _generate_lambdas(self, rng_key):
         rng_keys = jax.random.split(rng_key, 3)
         lams = (
@@ -76,14 +84,54 @@ class DataGenerator:
         )
         return lams, rng_keys[0]
 
-    def generate_lambdas(self):
-        lams, self.rng_key = self._generate_lambdas(self.rng_key)
-        return lams
+    def _compute_system_matrix(self,lam):
+        return jnp.eye(self.M) - lam * self.dt * self.Q
+
+    def _compute_residual(self, u0, u, C):
+        return u0 - C @ u
+
+    def _generate_us(self, rng_key):
+        rng_keys = jax.random.split(rng_key, 3)
+        us = (
+            1 * jax.random.uniform(rng_keys[1], (self.batch_size, self.M),
+                                   minval=self.u_real_low,
+                                   maxval=self.u_real_high)
+            + 1j * jax.random.uniform(rng_keys[2], (self.batch_size, self.M),
+                                      minval=self.u_imag_low,
+                                      maxval=self.u_imag_high)
+        )
+        return us, rng_keys[0]
+
+    @functools.partial(jax.jit, static_argnums=(0,))
+    def _generate_inputs(self, rng_key):
+        lams, rng_key = self._generate_lambdas(rng_key)
+        # Stop early if we don't need other data.
+        if self.input_type == 'lambda':
+            return lams, (), rng_key
+
+        Cs = jax.vmap(self._compute_system_matrix)(lam)
+        us, rng_key = self._generate_us(rng_key)
+        residuals = jax.vmap(self._compute_residual)
+
+        if self.input_type == 'lambda':
+            input_data = ()
+        elif self.input_type == 'residual':
+            input_data = (residuals,)
+        elif self.input_type == 'lambda_u':
+            input_data = (us,)
+        else:
+            raise UnknownInputTypeError()
+
+        return lams, input_data, rng_key
+
+    def generate_inputs(self):
+        lams, input_data, self.rng_key = self._generate_inputs(self.rng_key)
+        return lams, input_data
 
     def __iter__(self):
         while True:
-            lams = self.generate_lambdas()
-            yield lams
+            inputs = self.generate_inputs()
+            yield inputs
 
 
 class SpectralRadiusLoss:
@@ -238,6 +286,15 @@ def parse_args():
         ),
     )
     parser.add_argument(
+        '--input_type',
+        type=str,
+        default='lambda',
+        help=(
+            'What or how to train. Valid values '
+            'include "lambda", "residual", and "lambda_u".'
+        ),
+    )
+    parser.add_argument(
         '--extensive_tests',
         type=utils.parse_bool,
         default=False,
@@ -253,6 +310,7 @@ def parse_args():
     args.lambda_real_interval = sorted(args.lambda_real_interval)
     args.lambda_imag_interval = sorted(args.lambda_imag_interval)
     args.prec_type = args.prec_type.lower()
+    args.input_type = args.input_type.lower()
 
     # Dummy values
     args.lambda_real_interpolation_interval = None
@@ -321,6 +379,18 @@ def _from_model_arch(model_arch, train):
             model_arch_real.append(layer)
     (model_init, model_apply) = stax.serial(*model_arch_real)
     return (model_init, model_apply)
+
+
+def get_input_size(M, input_type):
+    if input_type == 'lambda':
+        input_size = 1
+    elif input_type == 'residual':
+        input_size = M
+    elif input_type == 'lambda_u':
+        input_size = 1 + M
+    else:
+        raise UnknownPrecTypeError()
+    return input_size
 
 
 def get_output_size(M, prec_type):
@@ -501,11 +571,23 @@ def check_output_size(args, model, params):
 #         jnp.savez(f, opt_state=opt_state, steps=steps)
 
 
-def get_obs(env):
-    return jnp.array([env_.lam for env_ in env.envs]).reshape(-1, 1)
+def get_obs(env, input_type):
+    if input_type == 'lambda':
+        obs = jnp.array([env_.lam for env_ in env.envs]).reshape(-1, 1)
+    elif input_type == 'residual':
+        obs = jnp.stack([env_.initial_residual for env_ in env.envs])
+    elif input_type == 'lambda_u':
+        obs = jnp.hstack((
+            jnp.array([env_.lam for env_ in env.envs]).reshape(-1, 1),
+            jnp.array([env_.state[0] for env_ in env.envs]).reshape(
+                -1, env.envs[0].M),
+        ))
+    else:
+        raise UnknownInputTypeError()
+    return obs
 
 
-def test_model(model, params, rng_key, env, ntests, name,
+def test_model(model, params, input_type, rng_key, env, ntests, name,
                loss_func=None, stats_path=None):
     """Test the `model` in the Gym `env` `ntests` times.
     `name` is the name for the test run for logging purposes.
@@ -536,7 +618,7 @@ def test_model(model, params, rng_key, env, ntests, name,
 
     for i in range(ntests):
         env.reset()
-        obs = get_obs(env)
+        obs = get_obs(env, input_type)
         done = [False for _ in range(num_envs)]
         if env.envs[0].prec is not None:
             action = [np.empty(env.action_space.shape,
@@ -557,7 +639,7 @@ def test_model(model, params, rng_key, env, ntests, name,
                 action = np.array(action)
 
             _, rewards, done, info = env.step(action)
-            obs = get_obs(env)
+            obs = get_obs(env, input_type)
 
             if stats_path is not None:
                 stats['action'].append(action)
@@ -612,6 +694,7 @@ def run_tests(model, params, args,
 
     model = jax.jit(model)
 
+    input_type = args.input_type
     rng_key = jax.random.PRNGKey(seed)
     num_test_envs = 1
     ntests = int(args.tests)
@@ -623,7 +706,7 @@ def run_tests(model, params, args,
                          lambda_real_interpolation_interval=None,
                          do_scale=False)
     results_RL = test_model(
-        model, params, rng_key, env, ntests, 'RL', loss_func,
+        model, params, input_type, rng_key, env, ntests, 'RL', loss_func,
         stats_path=stats_path)
 
     # Restart the whole thing, but now using the LU preconditioner (no RL here)
@@ -637,7 +720,8 @@ def run_tests(model, params, args,
         lambda_real_interpolation_interval=None,
         do_scale=False,
     )
-    results_LU = test_model(model, params, rng_key, env, ntests, 'LU')
+    results_LU = test_model(
+        model, params, input_type, rng_key, env, ntests, 'LU')
 
     # Restart the whole thing, but now using the minization preconditioner
     # (no RL here)
@@ -651,7 +735,8 @@ def run_tests(model, params, args,
         lambda_real_interpolation_interval=None,
         do_scale=False,
     )
-    results_min = test_model(model, params, rng_key, env, ntests, 'MIN')
+    results_min = test_model(
+        model, params, input_type, rng_key, env, ntests, 'MIN')
 
     if args.extensive_tests:
         env = utils.make_env(
@@ -662,7 +747,8 @@ def run_tests(model, params, args,
             lambda_real_interpolation_interval=None,
             do_scale=False,
         )
-        results_zeros = test_model(model, params, rng_key, env, ntests, 'zeros')
+        results_zeros = test_model(
+            model, params, input_type, rng_key, env, ntests, 'zeros')
 
         env = utils.make_env(
             args,
@@ -672,7 +758,8 @@ def run_tests(model, params, args,
             lambda_real_interpolation_interval=None,
             do_scale=False,
         )
-        results_EE = test_model(model, params, rng_key, env, ntests, 'EE')
+        results_EE = test_model(
+            model, params, input_type, rng_key, env, ntests, 'EE')
 
     duration = time.perf_counter() - start_time
     print(f'Testing took {duration} seconds.')
@@ -699,8 +786,9 @@ def get_cp_name(args, script_start):
     re_interval = '_'.join(map(str, args.lambda_real_interval))
     im_interval = '_'.join(map(str, args.lambda_imag_interval))
     return (
-        f'dp_model_{args.prec_type}_M_{args.M}_re_{re_interval}_im_{im_interval}_loss_{{}}_'
-        f'{script_start}.npy'
+        f'dp_model_prec_{args.prec_type}_input_{args.prec_type}_'
+        f'M_{args.M}_re_{re_interval}_im_{im_interval}_'
+        f'loss_{{}}_{script_start}.npy'
     )
 
 
@@ -727,10 +815,11 @@ def main():
         args.lambda_real_interval,
         args.lambda_imag_interval,
         args.batch_size,
+        args.input_type,
         subkey,
     )
 
-    input_shape = (1,)
+    input_shape = (get_input_size(args.M, args.input_type),)
     model_init, model, model_arch = build_model(args, train=True)
 
     rng_key, subkey = jax.random.split(rng_key)
@@ -757,19 +846,29 @@ def main():
         weight_decay_factor, 15000, 0.0, 2.0)
 
     # @jax.jit
-    def loss(params, lams, i, rng_key):
-        outputs = model(params, lams, rng=rng_key)
+    def loss(params, lams, i, input_data, rng_key):
+        if args.input_type == 'lambda':
+            outputs = model(params, lams, rng=rng_key)
+        elif args.input_type == 'residual':
+            (residuals,) = input_data
+            outputs = model(params, residuals, rng=rng_key)
+        elif args.input_type == 'lambda_u':
+            (us,) = input_data
+            outputs = model(params, jnp.hstack((lams, us)), rng=rng_key)
+        else:
+            raise UnknownInputTypeError()
+
         loss_ = loss_func(lams, outputs)
         weight_penalty = optimizers.l2_norm(params)
         weight_decay_factor = weight_decay_schedule(i)
         return loss_ + weight_decay_factor * weight_penalty
 
     @jax.jit
-    def update(i, opt_state, lams, rng_key):
+    def update(i, opt_state, lams, input_data, rng_key):
         params = opt_get_params(opt_state)
         rng_key, subkey = jax.random.split(rng_key)
         loss_, gradient = jax.value_and_grad(loss)(
-            params, lams, i.astype(float), subkey)
+            params, lams, i.astype(float), input_data, subkey)
         # print(gradient)
         # max_grad_norm = grad_clipping_schedule(i)
         gradient = optimizers.clip_grads(gradient, max_grad_norm)
@@ -786,9 +885,9 @@ def main():
     best_loss = np.inf
     last_losses = np.zeros(100)
     start_time = time.perf_counter()
-    for (step, lams) in enumerate(dataloader):
+    for (step, (lams, input_data)) in enumerate(dataloader):
         loss_, opt_state, rng_key = update(
-            jnp.array(step + old_steps), opt_state, lams, rng_key)
+            jnp.array(step + old_steps), opt_state, lams, input_data, rng_key)
 
         last_losses[step % len(last_losses)] = loss_.item()
 
