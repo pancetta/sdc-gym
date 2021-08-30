@@ -126,7 +126,7 @@ class DataGenerator:
         if self.input_type == 'lambda' and self.loss_type == 'spectral_radius':
             return lams, (), (), rng_key
 
-        Cs = jax.vmap(self._compute_system_matrix)(lam)
+        Cs = jax.vmap(self._compute_system_matrix)(lams)
         us, rng_key = self._generate_us(rng_key)
         residuals = jax.vmap(self._compute_residual)
 
