@@ -64,6 +64,8 @@ class DataGenerator:
             dt,
             lambda_real_interval,
             lambda_imag_interval,
+            u0_real_interval,
+            u0_imag_interval,
             u_real_interval,
             u_imag_interval,
             batch_size,
@@ -78,6 +80,8 @@ class DataGenerator:
         self.Q = self.coll.Qmat[1:, 1:]
         self.lambda_real_interval = lambda_real_interval
         self.lambda_imag_interval = lambda_imag_interval
+        self.u0_real_interval = u0_real_interval
+        self.u0_imag_interval = u0_imag_interval
         self.u_real_interval = u_real_interval
         self.u_imag_interval = u_imag_interval
         self.batch_size = batch_size
@@ -89,6 +93,11 @@ class DataGenerator:
         self.lam_real_high = self.lambda_real_interval[1]
         self.lam_imag_low = self.lambda_imag_interval[0]
         self.lam_imag_high = self.lambda_imag_interval[1]
+
+        self.u0_real_low = self.u0_real_interval[0]
+        self.u0_real_high = self.u0_real_interval[1]
+        self.u0_imag_low = self.u0_imag_interval[0]
+        self.u0_imag_high = self.u0_imag_interval[1]
 
         self.u_real_low = self.u_real_interval[0]
         self.u_real_high = self.u_real_interval[1]
@@ -110,6 +119,18 @@ class DataGenerator:
     def _compute_system_matrix(self,lam):
         return jnp.eye(self.M) - lam * self.dt * self.Q
 
+    def _generate_u0s(self, rng_key):
+        rng_keys = jax.random.split(rng_key, 3)
+        u0s = (
+            1 * jax.random.uniform(rng_keys[1], (self.batch_size, self.M),
+                                   minval=self.u0_real_low,
+                                   maxval=self.u0_real_high)
+            + 1j * jax.random.uniform(rng_keys[2], (self.batch_size, self.M),
+                                      minval=self.u0_imag_low,
+                                      maxval=self.u0_imag_high)
+        )
+        return u0s, rng_keys[0]
+
     def _generate_us(self, rng_key):
         rng_keys = jax.random.split(rng_key, 3)
         us = (
@@ -130,8 +151,8 @@ class DataGenerator:
             return lams, (), (), rng_key
 
         Cs = jax.vmap(self._compute_system_matrix)(lams)
+        u0s, rng_key = self._generate_u0s(rng_key)
         us, rng_key = self._generate_us(rng_key)
-        u0s = us
         residuals = jax.vmap(_compute_residual)(u0s, us, Cs)
 
         if self.loss_type == 'spectral_radius':
@@ -290,6 +311,20 @@ def parse_args():
         help='Interval to sample the imaginary part of lambda from.',
     )
     parser.add_argument(
+        '--u0_real_interval',
+        type=float,
+        nargs=2,
+        default=[1.0, 1.0],
+        help='Interval to sample the real part of u0 from.',
+    )
+    parser.add_argument(
+        '--u0_imag_interval',
+        type=float,
+        nargs=2,
+        default=[0.0, 0.0],
+        help='Interval to sample the imaginary part of u0 from.',
+    )
+    parser.add_argument(
         '--u_real_interval',
         type=float,
         nargs=2,
@@ -401,6 +436,8 @@ def parse_args():
 
     args.lambda_real_interval = sorted(args.lambda_real_interval)
     args.lambda_imag_interval = sorted(args.lambda_imag_interval)
+    args.u0_real_interval = sorted(args.u0_real_interval)
+    args.u0_imag_interval = sorted(args.u0_imag_interval)
     args.u_real_interval = sorted(args.u_real_interval)
     args.u_imag_interval = sorted(args.u_imag_interval)
     args.prec_type = args.prec_type.lower()
@@ -894,12 +931,15 @@ def run_tests(model, params, args,
 def get_cp_name(args, script_start):
     lam_re_interval = '_'.join(map(str, args.lambda_real_interval))
     lam_im_interval = '_'.join(map(str, args.lambda_imag_interval))
+    u0_re_interval = '_'.join(map(str, args.u0_real_interval))
+    u0_im_interval = '_'.join(map(str, args.u0_imag_interval))
     u_re_interval = '_'.join(map(str, args.u_real_interval))
     u_im_interval = '_'.join(map(str, args.u_imag_interval))
     return (
         f'dp_model_prec_{args.prec_type}_input_{args.input_type}_'
         f'lossf_{args.loss_type}_M_{args.M}_'
         f'lambda_re_{lam_re_interval}_im_{lam_im_interval}_'
+        f'u0_re_{u0_re_interval}_im_{u0_im_interval}_'
         f'u_re_{u_re_interval}_im_{u_im_interval}_'
         f'loss_{{}}_{script_start}.npy'
     )
@@ -929,6 +969,8 @@ def main():
         args.dt,
         args.lambda_real_interval,
         args.lambda_imag_interval,
+        args.u0_real_interval,
+        args.u0_imag_interval,
         args.u_real_interval,
         args.u_imag_interval,
         args.batch_size,
