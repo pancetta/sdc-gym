@@ -83,7 +83,6 @@ def parse_args():
         '--envname',
         type=str,
         default='sdc-v0',
-        choices=['sdc-v0', 'sdc-v1'],
         help=(
             'Gym environment to use;\n    sdc-v0 – SDC with a full iteration '
             'per step (no intermediate observations),\n    sdc-v1 – SDC with '
@@ -212,6 +211,15 @@ def parse_args():
         help=(
             'How to reward the agent. '
             'Set to `False` to reward based on the residual.'
+        ),
+    )
+    parser.add_argument(
+        '--reward_strategy',
+        type=str,
+        default='iteration_only',
+        help=(
+            'How to reward the agent. '
+            'For choices, see the respective environments.'
         ),
     )
     parser.add_argument(
