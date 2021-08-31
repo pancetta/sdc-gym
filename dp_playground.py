@@ -116,7 +116,7 @@ class DataGenerator:
         )
         return lams, rng_keys[0]
 
-    def _compute_system_matrix(self,lam):
+    def _compute_system_matrix(self, lam):
         return jnp.eye(self.M) - lam * self.dt * self.Q
 
     def _generate_u0s(self, rng_key):
