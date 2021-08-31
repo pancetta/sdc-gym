@@ -1058,6 +1058,11 @@ def main():
 
         weight_penalty = optimizers.l2_norm(params)
         weight_decay_factor = weight_decay_schedule(i)
+        # Cannot check for `jnp.complexfloating` because the type
+        # hierarchy doesn't match NumPy.
+        if issubclass(weight_penalty.dtype.type, (jnp.complex64, jnp.complex128)):
+            # Do not make loss output complex
+            weight_penalty = weight_penalty.real
         loss_ = loss_ + weight_decay_factor * weight_penalty
         return loss_, aux_data
 
