@@ -870,7 +870,7 @@ def run_tests(model, params, args,
     # Test the trained model.
     env = utils.make_env(args, num_envs=num_test_envs, seed=seed,
                          lambda_real_interpolation_interval=None,
-                         do_scale=False)
+                         do_scale=False, free_action_space=True)
     results_RL = test_model(
         model, params, input_type, rng_key, env, ntests, 'RL', loss_func,
         stats_path=stats_path)
@@ -886,6 +886,7 @@ def run_tests(model, params, args,
         seed=seed,
         lambda_real_interpolation_interval=None,
         do_scale=False,
+        free_action_space=True,
     )
     results_LU = test_model(
         model, params, input_type, rng_key, env, ntests, 'LU')
@@ -901,6 +902,7 @@ def run_tests(model, params, args,
         seed=seed,
         lambda_real_interpolation_interval=None,
         do_scale=False,
+        free_action_space=True,
     )
     results_min = test_model(
         model, params, input_type, rng_key, env, ntests, 'MIN')
@@ -913,6 +915,7 @@ def run_tests(model, params, args,
             seed=seed,
             lambda_real_interpolation_interval=None,
             do_scale=False,
+            free_action_space=True,
         )
         results_zeros = test_model(
             model, params, input_type, rng_key, env, ntests, 'zeros')
@@ -924,6 +927,7 @@ def run_tests(model, params, args,
             seed=seed,
             lambda_real_interpolation_interval=None,
             do_scale=False,
+            free_action_space=True,
         )
         results_EE = test_model(
             model, params, input_type, rng_key, env, ntests, 'EE')
