@@ -482,6 +482,8 @@ def _from_model_arch(model_arch, train):
     glorot_normal = jax.nn.initializers.variance_scaling(
         scale, "fan_avg", "truncated_normal", dtype=float)
     normal = jax.nn.initializers.normal(scale, dtype=float)
+    normal_complex = jax.nn.initializers.normal(scale, dtype=complex)
+
     dropout_rate = 0.0
     mode = 'train' if train else 'test'
     dropout_keep_rate = 1 - dropout_rate
