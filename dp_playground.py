@@ -436,6 +436,16 @@ def parse_args():
         ),
     )
 
+    parser.add_argument(
+        '--show_plot',
+        type=utils.parse_bool,
+        default=True,
+        help=(
+            'Whether to show the plot of the test results. '
+            'Useful to disable for non-interactive use.'
+        ),
+    )
+
     args = parser.parse_args()
     if args.envname is None:
         if args.input_type != 'lambda' and args.loss_type == 'residual':
@@ -937,7 +947,8 @@ def run_tests(model, params, args,
 
     if fig_path is not None:
         plt.savefig(fig_path, bbox_inches='tight')
-    plt.show()
+    if args.show_plot:
+        plt.show()
 
 
 def get_cp_name(args, script_start):
