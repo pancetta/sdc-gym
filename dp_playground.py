@@ -1137,6 +1137,7 @@ def main():
         loss_func=loss,
         # stats_path=args.model_path + '.stats.npz',
     )
+    return load_cp_path
 
 
 if __name__ == '__main__':
