@@ -945,7 +945,7 @@ def run_tests(model, params, args,
 
     plt.legend()
 
-    if fig_path is not None:
+    if args.tests > 0 and fig_path is not None:
         plt.savefig(fig_path, bbox_inches='tight')
     if args.show_plot:
         plt.show()
