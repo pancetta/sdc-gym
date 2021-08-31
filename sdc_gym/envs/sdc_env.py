@@ -42,6 +42,7 @@ class SDC_Full_Env(gym.Env):
             collect_states=False,
             use_doubles=True,
             do_scale=True,
+            free_action_space=False,
     ):
 
         self.np_random = None
@@ -91,14 +92,22 @@ class SDC_Full_Env(gym.Env):
             shape=(M * 2, self.max_iters) if collect_states else (2, M),
             dtype=np.complex128,
         )
-        # I read somewhere that the actions should be scaled to [-1,1],
-        # values will be real.
-        self.action_space = spaces.Box(
-            low=-1.0,
-            high=1.0,
-            shape=(M,),
-            dtype=np.float64 if use_doubles else np.float32,
-        )
+        if free_action_space:
+            self.action_space = spaces.Box(
+                low=-np.inf,
+                high=np.inf,
+                shape=(M,),
+                dtype=np.complex128 if use_doubles else np.complex64,
+            )
+        else:
+            # I read somewhere that the actions should be scaled to [-1,1],
+            # values will be real.
+            self.action_space = spaces.Box(
+                low=-1.0,
+                high=1.0,
+                shape=(M,),
+                dtype=np.float64 if use_doubles else np.float32,
+            )
 
         self.seed(seed)
         self.state = None
