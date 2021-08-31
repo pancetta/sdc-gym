@@ -136,7 +136,7 @@ class SDC_Full_Env(gym.Env):
         # Decide which preconditioner to use
         # (depending on self.prec string)... not very elegant
         if self.prec is None:
-            Qdmat = np.zeros_like(self.Q)
+            Qdmat = np.zeros_like(self.Q, dtype=self.action_space.dtype)
             np.fill_diagonal(Qdmat, scaled_action)
         elif self.prec.upper() == 'LU':
             QT = self.Q.T
